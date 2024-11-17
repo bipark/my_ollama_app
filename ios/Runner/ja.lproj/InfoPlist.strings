@@ -1,0 +1,9 @@
+/* 
+  infoPlist.strings
+  Runner
+
+  Created by BillyPark on 11/16/24.
+  
+*/
+CFBundleDisplayName = "マイ・オーラマ";
+NSPhotoLibraryUsageDescription = "写真をアップロードするには、写真アルバムの使用許可が必要です。";

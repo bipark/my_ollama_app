@@ -1,0 +1,9 @@
+/* 
+  infoPlist.strings
+  Runner
+
+  Created by BillyPark on 11/16/24.
+  
+*/
+CFBundleDisplayName = "마이올라마";
+NSPhotoLibraryUsageDescription = "사진 업로드를 위해 앱이 포토앨범 사용 권한이 필요합니다.";
