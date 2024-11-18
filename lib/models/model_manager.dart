@@ -124,15 +124,23 @@ class QDatabase {
   }
 
   //--------------------------------------------------------------------------//
-  Future deleteRecord(int id) async {
-    final db = await _instance.init();
-    await db.rawDelete('DELETE FROM questions WHERE id = ?', [id]);
+  Future deleteQuestions(String groupid) async {
+    try {
+      final db = await _instance.init();
+      await db.rawDelete('DELETE FROM questions WHERE groupid = ?', [groupid]);
+    } catch (e) {
+      print("Error Deleting Master: $e");
+    }
   }
 
   //--------------------------------------------------------------------------//
   Future deleteAllRecords() async {
-    final db = await _instance.init();
-    await db.rawDelete('DELETE FROM questions', []);
+    try {
+      final db = await _instance.init();
+      await db.rawDelete('DELETE FROM questions', []);
+    } catch (e) {
+      print("Error Deleting Master: $e");
+    }
   }
 
 }

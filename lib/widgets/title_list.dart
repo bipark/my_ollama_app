@@ -23,7 +23,7 @@ class _TitleListState extends State<TitleList> {
   void initState() {
     super.initState();
     _initEventConnector();
-    _loadData();
+    _loadData(refresh: true);
   }
 
   @override
@@ -40,13 +40,15 @@ class _TitleListState extends State<TitleList> {
 
 
   //--------------------------------------------------------------------------//
-  void _loadData() async {
+  void _loadData({bool refresh = false}) async {
     if (mounted) {
       _showWait = true;
       setState(() {});
 
       _titles = await context.read<MainProvider>().qdb.getTitles();
-      if (_titles.length > 0) _selectTitle(0);
+      if (refresh) {
+        if (_titles.length > 0) _selectTitle(0);
+      }
 
       _showWait = false;
       setState(() {});
@@ -54,13 +56,12 @@ class _TitleListState extends State<TitleList> {
   }
 
   //--------------------------------------------------------------------------//
-  void _deleteQuestion(int id) async {
+  void _deleteQuestion(String groupid) async {
     final provider = context.read<MainProvider>();
     final result = await AskDialog.show(context, title: tr("l_delete"), message: tr("l_delete_question"));
     if (result == true) {
-      await provider.qdb.deleteRecord(id);
+      await provider.qdb.deleteQuestions(groupid);
       _loadData();
-      MyEventBus().fire(NewChatBeginEvent());
       _selectedIndex = 0;
       setState(() {});
     }
@@ -92,7 +93,7 @@ class _TitleListState extends State<TitleList> {
           Row(
             children: [
               IconButton(onPressed: () {
-                _deleteQuestion(_titles[index]["id"]);
+                _deleteQuestion(_titles[index]["groupid"]);
               }, icon: Icon(Icons.delete_outline, size: 20, color: Colors.black54,))
             ],
           )

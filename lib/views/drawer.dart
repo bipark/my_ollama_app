@@ -140,6 +140,10 @@ class _MyDrawerState extends State<MyDrawer> {
                 Text(tr("l_myollama"), style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.indigo)),
                 Spacer(),
                 IconButton(onPressed: (){
+                  MyEventBus().fire(NewChatBeginEvent());
+                  _drawer.hideDrawer();
+                }, icon: Icon(Icons.add_comment_outlined, color: Colors.black)),
+                IconButton(onPressed: (){
                   MyEventBus().fire(RefreshMainListEvent());
                 }, icon: Icon(Icons.refresh, color: Colors.black)),
               ],

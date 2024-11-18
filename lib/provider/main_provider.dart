@@ -69,10 +69,7 @@ class MainProvider with ChangeNotifier {
       if (res.models != null) {
         modelList = res.models!;
 
-        if (modelList!.length == 0) {
-          selectedModel = "No Ollama Models";
-          modelList = [];
-        } else {
+        if (modelList!.length > 0) {
           bool modelExists = modelList!.any((m) => m.model == model);
           selectedModel = modelExists ? model : modelList!.first.model;
           serveConnected = true;

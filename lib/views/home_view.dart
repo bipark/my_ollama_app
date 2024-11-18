@@ -107,6 +107,7 @@ class _MyHomeState extends State<MyHome> {
     provider.curGroupId = Uuid().v4();
 
     _messages = [];
+    _questions = [];
     setState(() {});
   }
 
@@ -125,18 +126,17 @@ class _MyHomeState extends State<MyHome> {
 
     List<ollama.Message> qmsg = [];
 
-    // if you need to add previous questions
-    // _questions.forEach((item){
-    //   qmsg.add(ollama.Message(
-    //     role: ollama.MessageRole.system,
-    //     content: item["question"],
-    //     images: item["image"] != null ? [item["image"]] : [],
-    //   ));
-    //   qmsg.add(ollama.Message(
-    //     role: ollama.MessageRole.user,
-    //     content: item["answer"],
-    //   ));
-    // });
+    // add previous questions
+    _questions.forEach((item){
+      qmsg.add(ollama.Message(
+        role: ollama.MessageRole.system,
+        content: item["question"],
+      ));
+      qmsg.add(ollama.Message(
+        role: ollama.MessageRole.user,
+        content: item["answer"],
+      ));
+    });
 
     // add instruction
     qmsg.add(ollama.Message(
@@ -174,7 +174,12 @@ class _MyHomeState extends State<MyHome> {
 
       // save to DB
       provider.qdb.insertQuestion(provider.curGroupId, provider.instruction, question, answer, _selectedImage, provider.selectedModel!);
-      MyEventBus().fire(RefreshMainListEvent());
+      _questions = await context.read<MainProvider>().qdb.getDetails(context.read<MainProvider>().curGroupId);
+      //
+      final curList = await provider.qdb.getDetails(provider.curGroupId);
+      if (curList.length == 0) {
+        MyEventBus().fire(RefreshMainListEvent());
+      }
 
       _selectedImage = null;
     } catch (e) {
