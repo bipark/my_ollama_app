@@ -50,6 +50,11 @@ MyOllama를 사용하여 Ollama에 접속하여 다양한 LLM을 활용할 수 �
 - 이 앱을 사용하려면 반드시 Ollama가 설치된 컴퓨터가 필요합니다.
 - Ollama 호스트 설정 및 관리는 사용자 책임입니다. 보안 설정에 유의하세요.
 
+## App 다운로드 
+
+- 빌드가 어려운 분들은 아래 링크에서 앱을 다운 받을수 있습니다.
+- [https://apps.apple.com/kr/app/my-ollama/id6738298481](https://apps.apple.com/kr/app/my-ollama/id6738298481)
+
 ## 라이선스
 
 MyOllama는 GNU 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조해 주세요.
