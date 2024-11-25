@@ -1,64 +1,76 @@
-# MyOllama: Ollama 기반 LLM 모바일 클라이언트
-
-MyOllama는 Ollama가 설치된 컴퓨터에 접속하여 대규모 언어 모델(LLM)과 상호작용할 수 있는 모바일 클라이언트 앱입니다. 소스코드를 다운받아 빌드 하거나 [애플 앱스토어](https://apps.apple.com/us/app/my-ollama/id6738298481)에서 MyOllama 앱을 다운로드할 수 있습니다.
-
-## 소개
-
-Ollama는 대규모 언어 모델(Large Language Models, LLMs)을 로컬 컴퓨터에서 쉽게 실행할 수 있게 해주는 오픈 소스 소프트웨어입니다.
-MyOllama를 사용하여 Ollama에 접속하여 다양한 LLM을 활용할 수 있습니다. MyOllama - Ollama 프로그램을 통해 자신의 컴퓨터에서 LLM을 실행하므로, 별도의 사용료 없이 AI 모델과 대화할 수 있습니다.
-
-![poster](./image.jpg)
-
-## 주요 기능
-
-- 원격 LLM 접속: IP 주소를 통해 Ollama 호스트에 연결
-- 커스텀 프롬프트: 사용자 정의 Instruction 설정 지원
-- 다양한 오픈 소스 LLM 지원 (Llama, Gemma, Qwen, Mistral 등)
-- 사용자 정의 Instruction 설정 가능
-- 이미지 인식 기능 지원 (해당 기능을 지원하는 모델에 한함)
-- 직관적인 채팅 형식의 UI
-- 대화 기록: 채팅 세션 저장 및 관리
-- iOS와 Android 지원
-- 한국어, English, 日本語를 지원
+<div align='center'>
 
 
-## 사용 방법
+# ✨ MyOllama ✨
 
-1. Ollama를 컴퓨터에 설치합니다 (macOS, Windows, Linux 지원). Ollama 설치 방법은 [Ollama GitHub](https://ollama.com/download)에서 확인할 수 있습니다.
-2. 소스를 다운 받아서 Flutter를 이용하여 빌드하거나, [App Store](https://apps.apple.com/us/app/my-ollama/id6738298481)에서 MyOllama 앱을 다운로드합니다.
-3. Ollama에 원하는 모델을 설치합니다. [모델다운로드](https://ollama.com/search)
-4. Ollama를 원격 접속이 가능하도록 설정을 변경합니다. 참조: [링크](http://practical.kr/?p=809) 
-5. MyOllama 앱을 실행하고 Ollama가 설치된 컴퓨터의 IP 주소를 입력합니다.
-6. 원하는 AI 모델을 선택하고 대화를 시작합니다.
+_Ollama-based LLM mobile client_
 
-## 시스템 요구사항
+[한국어](#README_KR) •
+[日本語](#README_JP)
 
-- Ollama가 설치된 컴퓨터
-- 네트워크 연결
+</div>
 
-## 장점
+# MyOllama
 
-- 이 앱은 오픈소스 LLM을 효율적으로 활용하고자 하는 개발자 및 연구자를 위해 설계되었습니다. API 호출, 프롬프트 엔지니어링, 모델 성능 테스트 등 다양한 기술적 실험에 활용 가능합니다.
-- 무료로 고급 AI 기능 사용 가능
-- 다양한 LLM 모델 지원
-- 프라이버시 보호 (로컬 컴퓨터에서 실행)
-- 프로그래밍, 창의적 작업, 일상적인 질문 등 다양한 용도로 활용 가능
-- 대화의 맥락을 이어갈수 있도록 구성
+MyOllama is a mobile client app that allows you to connect to a computer with Ollama installed and interact with the Large Language Model (LLM). You can download and build the source code or download the MyOllama app from the [Apple App Store](https://apps.apple.com/us/app/my-ollama/id6738298481).
 
-## 주의사항
+## Introduction
 
-- 이 앱을 사용하려면 반드시 Ollama가 설치된 컴퓨터가 필요합니다.
-- Ollama 호스트 설정 및 관리는 사용자 책임입니다. 보안 설정에 유의하세요.
+Ollama is open source software that makes it easy to run Large Language Models (LLMs) on your local machine.
+You can use MyOllama to access Ollama and utilize various LLMs. MyOllama - Run LLMs on your own computer through the Ollama program, so you can talk to AI models without paying a fee.
 
-## App 다운로드 
+![poster](./image_en.jpg)
 
-- 빌드가 어려운 분들은 아래 링크에서 앱을 다운 받을수 있습니다.
+## Key features
+
+- Remote LLM access: Connect to the Ollama host via IP address
+- Custom prompts: support for setting custom instructions
+- Supports various open source LLMs (Llama, Gemma, Qwen, Mistral, etc.)
+- Customizable instruction settings
+- Supports image recognition (only on models that support it)
+- Intuitive chat-like UI
+- Conversation history: save and manage chat sessions
+- Supports iOS and Android
+- Supports Korean, English, and Japanese
+
+## How to use
+
+1. Install Ollama on your computer (macOS, Windows, Linux supported). You can see how to install Ollama on [Ollama GitHub](https://ollama.com/download).
+2. Download the source and build it with Flutter, or download the MyOllama app from the [App Store](https://apps.apple.com/us/app/my-ollama/id6738298481).
+3. Install the desired model in Ollama. [Download model](https://ollama.com/search)
+4. Change the settings to make Ollama remotely accessible. See: [link](http://practical.kr/?p=809) 
+5. Launch the MyOllama app and enter the IP address of the computer where Ollama is installed.
+6. Select the desired AI model and start a conversation.
+
+## System requirements
+
+- Computer with Ollama installed
+- Network connection
+
+## Advantages
+
+- This app is designed for developers and researchers who want to efficiently utilize open-source LLMs. It can be utilized for various technical experiments such as API calls, prompt engineering, model performance testing, etc.
+- Advanced AI features available for free
+- Supports a wide range of LLM models
+- Privacy-protected (runs on your local machine)
+- Versatile for programming, creative work, casual questions, etc.
+- Organized to keep conversations in context
+
+## Notes
+
+- This app requires a computer with Ollama installed.
+- You are responsible for setting up and managing your Ollama host. Be aware of security settings.
+
+## Download App 
+
+- For those who have difficulty building, you can download the app from the link below.
 - [https://apps.apple.com/kr/app/my-ollama/id6738298481](https://apps.apple.com/kr/app/my-ollama/id6738298481)
 
-## 라이선스
+## License
 
-MyOllama는 GNU 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조해 주세요.
+MyOllama is licensed under the GNU license. For more information, please refer to the [LICENSE](LICENSE) file.
 
-## 연락처
+## Contact
 
-MyOllama에 대한 문의나 버그 신고는 rtlink.park@gmail.com 으로 메일을 보내주세요.
+For questions or bug reports about MyOllama, please send an email to rtlink.park@gmail.com.
+

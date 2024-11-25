@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/foundation.dart';
 
 import 'package:ollama_dart/ollama_dart.dart';
@@ -9,6 +11,7 @@ import 'package:http/http.dart' as http;
 import '../models/model_manager.dart';
 
 final FEED_IMAGE_SIZE = 200.0;
+
 
 class MainProvider with ChangeNotifier {
   final _prefs = SharedPreferencesAsync();
@@ -62,7 +65,7 @@ class MainProvider with ChangeNotifier {
   }
 
   //--------------------------------------------------------------------------//
-  Future<void> _loadModels() async {
+  Future<bool> _loadModels() async {
     final model = await _prefs.getString("selectedModel");
     try {
       final res = await ollient!.listModels();
@@ -75,12 +78,17 @@ class MainProvider with ChangeNotifier {
           serveConnected = true;
         }
       }
+      notifyListeners();
+
+      return true;
     } catch (e) {
       print(e);
       selectedModel = "No Ollama Models";
       modelList = [];
+      notifyListeners();
+
+      return false;
     }
-    notifyListeners();
   }
 
   //--------------------------------------------------------------------------//
@@ -115,14 +123,20 @@ class MainProvider with ChangeNotifier {
   }
 
   //--------------------------------------------------------------------------//
-  void setBaseUrl(String url) async {
+  Future<bool> setBaseUrl(String url) async {
     baseUrl = url;
     _prefs.setString("baseUrl", url);
 
     ollient = null;
     ollient = OllamaClient(baseUrl: baseUrl + "/api");
-    await _loadModels();
-    notifyListeners();
+    try {
+      await ollient!.listModels();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print(e);
+      return false;
+    }
   }
 
   //--------------------------------------------------------------------------//

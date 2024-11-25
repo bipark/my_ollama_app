@@ -90,11 +90,29 @@ class _MySettingsState extends State<MySettings> {
 
     final widgets = [
       ListTile(title: Text(tr("l_ollama_setting"), style: title_style)),
-      QTextField(tr("l_server_address"), server_address, (String value){
-        if (_isValidUrl(value)) {
-          provider.setBaseUrl(value);
-        }
-      }),
+      Row(
+        children: [
+          Expanded(
+            child:QTextField(tr("l_server_address"), server_address, (_){})
+          ),
+          IconButton(
+            icon: Icon(Icons.network_check, size: 30,),
+            onPressed: () async {
+              if (_isValidUrl(server_address.text)) {
+                final reached = await provider.setBaseUrl(server_address.text);
+                if (reached) {
+                  provider.setBaseUrl(server_address.text);
+                  AskDialog.show(context, title: tr("l_success"), message: tr("l_success_url"));
+                } else {
+                  AskDialog.show(context, title: tr("l_error"), message: tr("l_error_url"));
+                }
+              } else {
+                AskDialog.show(context, title: tr("l_error"), message: tr("l_invalid_url"));
+              }
+            },
+          )
+        ],
+      ),
       QTextField(tr("l_instructions"), instruction, (String value){
         provider.setInstruction(value);
       }, maxLines: 5),
