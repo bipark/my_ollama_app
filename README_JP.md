@@ -4,8 +4,8 @@
 
 _OllamaベースのLLMモバイルクライアント_
 
-[ENGLISH](#README) •
-[한국어](#README_KR) 
+[ENGLISH](./README.md) •
+[한국어](./README_KR.md) 
 
 </div>
 

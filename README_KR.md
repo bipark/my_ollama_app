@@ -4,8 +4,8 @@
 
 _Ollama 기반 LLM 모바일 클라이언트_
 
-[ENGLISH](#README) •
-[日本語](#README_JP)
+[ENGLISH](./README.md) •
+[日本語](./README_JP.md)
 
 </div>
 

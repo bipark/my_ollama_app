@@ -5,8 +5,8 @@
 
 _Ollama-based LLM mobile client_
 
-[한국어](#README_KR) •
-[日本語](#README_JP)
+[한국어](./README_KR.md) •
+[日本語](./README_JP.md)
 
 </div>
 
