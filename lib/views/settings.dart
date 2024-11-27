@@ -127,7 +127,7 @@ class _MySettingsState extends State<MySettings> {
       }),
       ListTile(title: Text(tr("l_app_info"), style: title_style)),
       ActionCardPanel(Icons.memory, tr("l_open_source"), tr("l_open_comment"), Icons.arrow_forward_ios, () {
-        launchUrl(Uri.parse("https://github.com/bipark/my_ollama_client"));
+        launchUrl(Uri.parse("https://github.com/bipark/my_ollama_app"));
       }),
       ActionCardPanel(Icons.delete_forever_outlined, tr("l_delete"), tr("l_delete_all"), Icons.arrow_forward_ios, () {
         _deleteAllRecords();

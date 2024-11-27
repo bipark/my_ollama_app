@@ -2,8 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:popup_menu/popup_menu.dart';
+import 'package:flutter_styled_toast/flutter_styled_toast.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:uuid/uuid.dart';
 import 'package:ollama_dart/ollama_dart.dart' as ollama;
@@ -13,13 +17,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../provider/main_provider.dart';
 import '../helpers/event_bus.dart';
+import '../widgets/dialogs.dart';
 import 'settings.dart';
 
 class MyHome extends StatefulWidget {
   const MyHome({Key? key}) : super(key: key);
 
   @override
-  createState()=>_MyHomeState();
+  createState() => _MyHomeState();
 }
 
 class _MyHomeState extends State<MyHome> {
@@ -47,10 +52,12 @@ class _MyHomeState extends State<MyHome> {
   //--------------------------------------------------------------------------//
   Future<void> _init() async {
     Widget newnote = IconButton(onPressed: _new_note, icon: Icon(Icons.add_comment_outlined));
-    Widget settings = IconButton(onPressed: (){
-      Navigator.push(context, MaterialPageRoute(builder: (context) => MySettings()));
-    }, icon: Icon(Icons.settings, color: Colors.white));
-
+    Widget settings = IconButton(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => MySettings()));
+        },
+        icon: Icon(Icons.settings, color: Colors.white)
+    );
     MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), [newnote, settings]));
   }
 
@@ -71,16 +78,15 @@ class _MyHomeState extends State<MyHome> {
 
     _messages = [];
     _questions = await context.read<MainProvider>().qdb.getDetails(context.read<MainProvider>().curGroupId);
-
-    _questions.reversed.forEach((item){
+    _questions.reversed.forEach((item) {
       if (item["image"] != null) {
         _makeImageMessageAdd(item["image"]);
       }
       int qtime = DateTime.parse(item["created"]).millisecondsSinceEpoch;
-      _makeMessageAdd(_answerer, item["question"], Uuid().v4(), qtime);
+      _makeMessageAdd(_answerer, item["question"], Uuid().v4(), qtime, item["id"]);
 
       String answer = item["answer"];
-      _makeMessageAdd(_user, answer, Uuid().v4(), qtime);
+      _makeMessageAdd(_user, answer, Uuid().v4(), qtime, item["id"]);
     });
 
     _showWait = false;
@@ -88,18 +94,18 @@ class _MyHomeState extends State<MyHome> {
   }
 
   //--------------------------------------------------------------------------//
-  void _makeMessageAdd(types.User user, String text, String unique, int time) async {
+  void _makeMessageAdd(types.User user, String text, String unique, int time, [int? id = null]) async {
     final msg = types.TextMessage(
-        author: user,
-        createdAt: time,
-        id: unique,
-        text: text
+      author: user,
+      createdAt: time,
+      id: unique,
+      text: text,
+      metadata: {'id': id},
     );
 
     _messages.insert(0, msg);
     if (mounted) setState(() {});
   }
-
 
   //--------------------------------------------------------------------------//
   void _new_note() {
@@ -127,7 +133,7 @@ class _MyHomeState extends State<MyHome> {
     List<ollama.Message> qmsg = [];
 
     // add previous questions
-    _questions.forEach((item){
+    _questions.forEach((item) {
       qmsg.add(ollama.Message(
         role: ollama.MessageRole.system,
         content: item["question"],
@@ -168,13 +174,25 @@ class _MyHomeState extends State<MyHome> {
       String answer = '';
       await for (final res in stream) {
         answer += (res.message.content ?? '');
-        _messages[0] = (_messages[0] as types.TextMessage).copyWith(text: answer);
-        setState(() {});
+        if (_messages.isNotEmpty) {
+          if (_messages[0] is types.TextMessage) {
+            _messages[0] = (_messages[0] as types.TextMessage).copyWith(text: answer);
+          } else {
+            _messages[0] = types.TextMessage(
+              author: _answerer,
+              createdAt: DateTime.now().millisecondsSinceEpoch,
+              id: const Uuid().v4(),
+              text: answer,
+            );
+          }
+          setState(() {});
+        }
       }
 
       // save to DB
       provider.qdb.insertQuestion(provider.curGroupId, provider.instruction, question, answer, _selectedImage, provider.selectedModel!);
-      _questions = await context.read<MainProvider>().qdb.getDetails(context.read<MainProvider>().curGroupId);
+      _loadHistoryChats();
+
       //
       final curList = await provider.qdb.getDetails(provider.curGroupId);
       if (curList.length == 0) {
@@ -189,22 +207,20 @@ class _MyHomeState extends State<MyHome> {
     }
   }
 
-
   //--------------------------------------------------------------------------//
   void _handleAttachmentPressed() async {
-    XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50, maxWidth: 500, maxHeight: 500);
+    XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 500,
+        maxHeight: 500
+    );
     if (image != null) {
       File file = File(image.path);
       List<int> imageBytes = file.readAsBytesSync();
       _selectedImage = base64Encode(imageBytes);
       _makeImageMessageAdd(_selectedImage!);
     }
-  }
-
-  //--------------------------------------------------------------------------//
-  void _handleMessageTap(BuildContext _, types.Message message) async {
-    // print("_handleMessageTap");
-    // print(message);
   }
 
   //--------------------------------------------------------------------------//
@@ -241,10 +257,7 @@ class _MyHomeState extends State<MyHome> {
     final msg = types.CustomMessage(
       author: _answerer,
       id: Uuid().v4(),
-      metadata: {
-        'data': base64image,
-        'type': 'image'
-      },
+      metadata: {'data': base64image, 'type': 'image'},
     );
 
     _messages.insert(0, msg);
@@ -258,43 +271,102 @@ class _MyHomeState extends State<MyHome> {
         child: Image.memory(
           base64Decode(message.metadata!['data']),
           fit: BoxFit.contain,
-          gaplessPlayback: true,
         ),
       );
     }
     return const SizedBox();
   }
 
+  //--------------------------------------------------------------------------//
+  Widget _textMessageBuilder(types.TextMessage message, {required int messageWidth, bool? showName}) {
+    final provider = context.read<MainProvider>();
+    final isOwnMessage = message.author.id == _user.id;
+    final messageKey = GlobalKey();
+
+    return GestureDetector(
+      onTap: () {
+        PopupMenu menu = PopupMenu(
+            context: context,
+            items: [
+              MenuItem(title: 'Copy', image: Icon(Icons.copy, color: Colors.white,)),
+              MenuItem(title: 'Share', image: Icon(Icons.share, color: Colors.white,)),
+              MenuItem(title: 'Delete', image: Icon(Icons.delete_outline, color: Colors.white,)),
+            ],
+            onClickMenu: (MenuItemProvider item) async {
+              if (message.metadata == null) return;
+
+              final id = message.metadata!['id'];
+              final record = await provider.qdb.getDetailsById(id);
+              if (record.length == 0) return;
+
+              final question = record[0]["question"];
+              final answer = record[0]["answer"];
+              final created = record[0]["created"];
+              final model = record[0]["engine"];
+              final sharedData = "$question\n\n$answer\n\n$model\n$created";
+
+              if (item.menuTitle == "Copy") {
+                Clipboard.setData(ClipboardData(text: sharedData));
+                showToast(tr("l_copyed"),context:context);
+              } else if (item.menuTitle == "Share") {
+                Share.share(sharedData);
+              } else if (item.menuTitle == "Delete") {
+                final result = await AskDialog.show(context, title: tr("l_delete"), message: tr("l_delete_question"));
+                if (result == true) {
+                  await provider.qdb.deleteRecord(id);
+                  _loadHistoryChats();
+                }
+              }
+            }
+        );
+        menu.show(widgetKey: messageKey);
+      },
+      child: Container(
+        key: messageKey,
+        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            fontSize: isOwnMessage ? 15 : 14,
+            color: isOwnMessage ? Colors.white : Colors.black87,
+            decorationColor: isOwnMessage ? Colors.white70 : Colors.grey,
+          ),
+        ),
+      ),
+    );
+  }
 
   //--------------------------------------------------------------------------//
   Widget _chatUI() {
     final provider = context.read<MainProvider>();
 
     return Chat(
-        theme: DefaultChatTheme(
+      theme: DefaultChatTheme(
           inputBackgroundColor: Colors.indigo,
           inputTextCursorColor: Colors.white,
-          receivedMessageBodyTextStyle: TextStyle(fontSize: 14),
-          sentMessageBodyTextStyle: TextStyle(fontSize: 15, color: Colors.white),
           backgroundColor: Colors.grey.shade200,
           messageInsetsHorizontal: 16,
-          messageInsetsVertical: 10
-        ),
-        // dateLocale: "ko_KR",
-        messages: _messages,
-        onAttachmentPressed: _handleAttachmentPressed,
-        onMessageTap: _handleMessageTap,
-        onPreviewDataFetched: _handlePreviewDataFetched,
-        onSendPressed: _beginAsking,
-        showUserAvatars: false,
-        showUserNames: false,
-        disableImageGallery: true,
-        user: _user,
-        l10n: ChatL10nEn(
-          inputPlaceholder: tr("l_input_question"),
-          emptyChatPlaceholder: provider.serveConnected ? tr("l_no_conversation") : tr("l_no_server"),
-        ),
-        customMessageBuilder: _customMessageBuilder,
+          messageInsetsVertical: 10),
+      messages: _messages,
+      onAttachmentPressed: _handleAttachmentPressed,
+      onPreviewDataFetched: _handlePreviewDataFetched,
+      onSendPressed: _beginAsking,
+      showUserAvatars: false,
+      showUserNames: false,
+      disableImageGallery: true,
+      usePreviewData: false,
+      user: _user,
+      l10n: ChatL10nEn(
+        inputPlaceholder: tr("l_input_question"),
+        emptyChatPlaceholder: provider.serveConnected
+            ? tr("l_no_conversation")
+            : tr("l_no_server"),
+      ),
+      customMessageBuilder: _customMessageBuilder,
+      textMessageBuilder: (message,
+              {required messageWidth, required showName}) =>
+          _textMessageBuilder(message,
+              messageWidth: messageWidth, showName: showName),
     );
   }
 
@@ -302,20 +374,20 @@ class _MyHomeState extends State<MyHome> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).requestFocus(FocusNode());
-      },
-      child: Scaffold(
-        body: Container(
-          child: Stack(
-            children: [
-              _chatUI(),
-              _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
-            ],
+        onTap: () {
+          FocusScope.of(context).requestFocus(FocusNode());
+        },
+        child: Scaffold(
+          body: Container(
+            child: Stack(
+              children: [
+                _chatUI(),
+                _showWait
+                    ? Center(child: CircularProgressIndicator())
+                    : SizedBox()
+              ],
+            ),
           ),
-        ),
-      )
-    );
+        ));
   }
-
 }

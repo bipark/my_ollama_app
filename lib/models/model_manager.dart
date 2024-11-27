@@ -112,6 +112,12 @@ class QDatabase {
     return details;
   }
 
+  //--------------------------------------------------------------------------//
+  Future<List> getDetailsById(int id) async {
+    final db = await _instance.init();
+    List details = await db.rawQuery("SELECT * FROM questions WHERE id = ?", [id]);
+    return details;
+  }
 
   //--------------------------------------------------------------------------//
   Future<List> searchKeywords(String keyword) async {
@@ -124,7 +130,7 @@ class QDatabase {
   }
 
   //--------------------------------------------------------------------------//
-  Future deleteQuestions(String groupid) async {
+  Future<void> deleteQuestions(String groupid) async {
     try {
       final db = await _instance.init();
       await db.rawDelete('DELETE FROM questions WHERE groupid = ?', [groupid]);
@@ -134,7 +140,17 @@ class QDatabase {
   }
 
   //--------------------------------------------------------------------------//
-  Future deleteAllRecords() async {
+  Future<void> deleteRecord(int id) async {
+    try {
+      final db = await _instance.init();
+      await db.rawDelete('DELETE FROM questions WHERE id = ?', [id]);
+    } catch (e) {
+      print("Error Deleting Master: $e");
+    }
+  }
+
+  //--------------------------------------------------------------------------//
+  Future<void> deleteAllRecords() async {
     try {
       final db = await _instance.init();
       await db.rawDelete('DELETE FROM questions', []);
