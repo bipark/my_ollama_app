@@ -1,8 +1,8 @@
 name: my_ollama
-description: "A new Flutter project."
+description: "MyOllama"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.5+41127
+version: 1.0.6+41128
 
 environment:
   sdk: ^3.5.4

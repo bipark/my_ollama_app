@@ -8,6 +8,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:popup_menu/popup_menu.dart';
 import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+
 
 import 'package:uuid/uuid.dart';
 import 'package:ollama_dart/ollama_dart.dart' as ollama;
@@ -190,7 +192,7 @@ class _MyHomeState extends State<MyHome> {
       }
 
       // save to DB
-      provider.qdb.insertQuestion(provider.curGroupId, provider.instruction, question, answer, _selectedImage, provider.selectedModel!);
+      await provider.qdb.insertQuestion(provider.curGroupId, provider.instruction, question, answer, _selectedImage, provider.selectedModel!);
       _loadHistoryChats();
 
       //
@@ -323,15 +325,8 @@ class _MyHomeState extends State<MyHome> {
       },
       child: Container(
         key: messageKey,
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            fontSize: isOwnMessage ? 15 : 14,
-            color: isOwnMessage ? Colors.white : Colors.black87,
-            decorationColor: isOwnMessage ? Colors.white70 : Colors.grey,
-          ),
-        ),
+        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: MarkdownBody(data: message.text)
       ),
     );
   }
@@ -342,11 +337,13 @@ class _MyHomeState extends State<MyHome> {
 
     return Chat(
       theme: DefaultChatTheme(
-          inputBackgroundColor: Colors.indigo,
-          inputTextCursorColor: Colors.white,
-          backgroundColor: Colors.grey.shade200,
-          messageInsetsHorizontal: 16,
-          messageInsetsVertical: 10),
+        primaryColor: Colors.orangeAccent,
+        inputBackgroundColor: Colors.indigo,
+        inputTextCursorColor: Colors.white,
+        backgroundColor: Colors.grey.shade200,
+        messageInsetsHorizontal: 16,
+        messageInsetsVertical: 10,
+      ),
       messages: _messages,
       onAttachmentPressed: _handleAttachmentPressed,
       onPreviewDataFetched: _handlePreviewDataFetched,
@@ -363,10 +360,8 @@ class _MyHomeState extends State<MyHome> {
             : tr("l_no_server"),
       ),
       customMessageBuilder: _customMessageBuilder,
-      textMessageBuilder: (message,
-              {required messageWidth, required showName}) =>
-          _textMessageBuilder(message,
-              messageWidth: messageWidth, showName: showName),
+      textMessageBuilder: (message, {required messageWidth, required showName}) =>
+          _textMessageBuilder(message, messageWidth: messageWidth, showName: showName),
     );
   }
 
