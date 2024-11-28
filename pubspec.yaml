@@ -30,7 +30,7 @@ dependencies:
   popup_menu: ^2.1.0
   flutter_styled_toast: ^2.2.1
   share_plus: ^10.1.2
-  markdown_widget: ^2.3.2+6
+  flutter_markdown: ^0.7.4+3
 
 dev_dependencies:
   flutter_test:
