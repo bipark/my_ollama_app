@@ -2,7 +2,7 @@ name: my_ollama
 description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+41105
+version: 1.0.5+41127
 
 environment:
   sdk: ^3.5.4
@@ -27,6 +27,10 @@ dependencies:
   url_launcher: ^6.3.1
   easy_localization: ^3.0.7
   app_settings: ^5.1.1
+  popup_menu: ^2.1.0
+  flutter_styled_toast: ^2.2.1
+  share_plus: ^10.1.2
+  markdown_widget: ^2.3.2+6
 
 dev_dependencies:
   flutter_test:
