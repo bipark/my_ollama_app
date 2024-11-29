@@ -9,3 +9,7 @@
 - Check server connection status
 - Add message copy, share, delete functions
 
+### 2024/11/29 - v1.0.6
+
+- Support Markdown format
+

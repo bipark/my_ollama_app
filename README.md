@@ -32,6 +32,7 @@ You can use MyOllama to access Ollama and utilize various LLMs. MyOllama - Run L
 - Conversation history: save and manage chat sessions
 - Supports iOS and Android
 - Supports Korean, English, and Japanese
+- Support Markdown format
 
 ## How to use
 
