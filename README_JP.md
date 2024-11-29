@@ -34,12 +34,12 @@ MyOllamaを使用してOllamaに接続し、様々なLLMを活用することが
 
 ## 使い方
 
-1.Ollamaをパソコンにインストールします(macOS、Windows、Linuxをサポート)。Ollamaのインストール方法は[Ollama GitHub](https://ollama.com/download)で確認することができます。
-2.ソースをダウンロードしてFlutterを使ってビルドするか、[App Store](https://apps.apple.com/us/app/my-ollama/id6738298481)からMyOllamaアプリをダウンロードします。
-3.Ollamaに好きなモデルをインストールします。[モデルダウンロード](https://ollama.com/search)
-4.Ollamaをリモートアクセスができるように設定を変更します。参照ください： [リンク](http://practical.kr/?p=809) 
-5.MyOllamaアプリを実行し、OllamaがインストールされているコンピュータのIPアドレスを入力します。
-6.希望のAIモデルを選択して会話を開始します。
+1. Ollamaをパソコンにインストールします(macOS、Windows、Linuxをサポート)。Ollamaのインストール方法は[Ollama GitHub](https://ollama.com/download)で確認することができます。
+2. ソースをダウンロードしてFlutterを使ってビルドするか、[App Store](https://apps.apple.com/us/app/my-ollama/id6738298481)からMyOllamaアプリをダウンロードします。
+3. Ollamaに好きなモデルをインストールします。[モデルダウンロード](https://ollama.com/search)
+4. Ollamaをリモートアクセスができるように設定を変更します。参照ください： [リンク](http://practical.kr/?p=809) 
+5. MyOllamaアプリを実行し、OllamaがインストールされているコンピュータのIPアドレスを入力します。
+6. 希望のAIモデルを選択して会話を開始します。
 
 ## システム要件
 
@@ -63,7 +63,7 @@ MyOllamaを使用してOllamaに接続し、様々なLLMを活用することが
 ## アプリのダウンロード 
 
 - ビルドが難しい方は下記のリンクからアプリをダウンロードすることができます。
-- https://apps.apple.com/kr/app/my-ollama/id6738298481](https://apps.apple.com/kr/app/my-ollama/id6738298481)
+- [https://apps.apple.com/kr/app/my-ollama/id6738298481](https://apps.apple.com/kr/app/my-ollama/id6738298481)
 
 ## ライセンス
 
