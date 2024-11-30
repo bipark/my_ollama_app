@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:flutter_styled_toast/flutter_styled_toast.dart';
+
 
 import '../widgets/text_fields.dart';
 import '../provider/main_provider.dart';
@@ -101,10 +103,9 @@ class _MySettingsState extends State<MySettings> {
               if (_isValidUrl(server_address.text)) {
                 final reached = await provider.setBaseUrl(server_address.text);
                 if (reached) {
-                  provider.setBaseUrl(server_address.text);
-                  AskDialog.show(context, title: tr("l_success"), message: tr("l_success_url"));
+                  showToast(tr("l_success"), context: context, position: StyledToastPosition.center);
                 } else {
-                  AskDialog.show(context, title: tr("l_error"), message: tr("l_error_url"));
+                  showToast(tr("l_error_url"), context: context, position: StyledToastPosition.center);
                 }
               } else {
                 AskDialog.show(context, title: tr("l_error"), message: tr("l_invalid_url"));

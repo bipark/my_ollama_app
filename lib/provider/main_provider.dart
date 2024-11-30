@@ -38,16 +38,8 @@ class MainProvider with ChangeNotifier {
 
     // Init Ollama
     ollient = OllamaClient(baseUrl: baseUrl + "/api");
-
-    // Check Remote Server
-    if (await _isOllamaOpen()) {
-      serveConnected = true;
-      await _loadModels();
-    } else {
-      selectedModel = "No Ollama Models";
-    }
-
-    await initPackageInfo();
+    await checkServerConnection();
+    await _initPackageInfo();
 
     // Init DB
     await qdb.init();
@@ -56,6 +48,7 @@ class MainProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  //--------------------------------------------------------------------------//
   Future<void> loadPreferences() async {
     temperature = await _prefs.getDouble("temperature") ?? 0.5;
     baseUrl = await _prefs.getString("baseUrl") ?? baseUrl;
@@ -92,6 +85,17 @@ class MainProvider with ChangeNotifier {
   }
 
   //--------------------------------------------------------------------------//
+  Future<bool> checkServerConnection() async {
+    if (await _isOllamaOpen()) {
+      serveConnected = true;
+      return await _loadModels();
+    } else {
+      selectedModel = "No Ollama Models";
+      return false;
+    }
+  }
+
+  //--------------------------------------------------------------------------//
   Future<bool> _isOllamaOpen() async {
     try {
       final response = await http.get(Uri.parse(baseUrl)).timeout(Duration(seconds: 1));
@@ -109,7 +113,7 @@ class MainProvider with ChangeNotifier {
   }
 
   //--------------------------------------------------------------------------//
-  Future<void> initPackageInfo() async {
+  Future<void> _initPackageInfo() async {
     _packageInfo = await PackageInfo.fromPlatform();
     version = _packageInfo!.version;
     buildNumber = int.parse(_packageInfo!.buildNumber);

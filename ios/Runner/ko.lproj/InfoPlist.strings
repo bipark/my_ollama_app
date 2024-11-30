@@ -6,4 +6,4 @@
   
 */
 CFBundleDisplayName = "마이올라마";
-NSPhotoLibraryUsageDescription = "사진 업로드를 위해 앱이 포토앨범 사용 권한이 필요합니다.";
+NSPhotoLibraryUsageDescription = "앱이 사진을 분석하기 위해 포토앨범 사용 권한 필요합니다.";

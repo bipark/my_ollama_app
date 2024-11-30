@@ -39,3 +39,7 @@ class CloseDrawerEvent {
 class NewChatBeginEvent {
   NewChatBeginEvent();
 }
+
+class ReloadModelEvent {
+  ReloadModelEvent();
+}

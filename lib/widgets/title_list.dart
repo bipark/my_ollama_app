@@ -85,7 +85,7 @@ class _TitleListState extends State<TitleList> {
               child : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w400)),
+                    Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400)),
                     Text(_titles[index]["created"].toString(), style: TextStyle(fontSize: 12, color: Colors.grey))
                   ]
               )
@@ -122,15 +122,14 @@ class _TitleListState extends State<TitleList> {
           CustomScrollView(
             slivers: [
               SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    return InkWell(
-                      child: _titlePanel(index),
-                      onTap: (){
-                        _selectTitle(index);
-                      },
-                    );
-                  },
-                      childCount: _titles.length)
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  return InkWell(
+                    child: _titlePanel(index),
+                    onTap: (){
+                      _selectTitle(index);
+                    },
+                  );
+                }, childCount: _titles.length)
               )
             ],
           ),

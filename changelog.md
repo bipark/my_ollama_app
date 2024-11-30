@@ -13,3 +13,10 @@
 
 - Support Markdown format
 
+### 2024/11/30 - v.1.0.7
+
+- Change item menu shape
+- Add Share All menu
+- Add Re question menu
+- Add Web link function
+- Release Android Version

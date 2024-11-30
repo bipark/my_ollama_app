@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:popup_menu/popup_menu.dart';
 import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:uuid/uuid.dart';
 import 'package:ollama_dart/ollama_dart.dart' as ollama;
@@ -20,7 +19,6 @@ import 'package:image_picker/image_picker.dart';
 import '../provider/main_provider.dart';
 import '../helpers/event_bus.dart';
 import '../widgets/dialogs.dart';
-import 'settings.dart';
 
 class MyHome extends StatefulWidget {
   const MyHome({Key? key}) : super(key: key);
@@ -31,12 +29,15 @@ class MyHome extends StatefulWidget {
 
 class _MyHomeState extends State<MyHome> {
   final ImagePicker _picker = ImagePicker();
-  bool _showWait = false;
   List<types.Message> _messages = [];
   List _questions = [];
   final _user = const types.User(id: '82091008-a484-4a89-ae75-a22bf8d6f3ac');
   final _answerer = const types.User(id: '82091008-a484-4a89-ae75-a22bf8d6f3ad');
   String? _selectedImage;
+  TextEditingController _questionController = TextEditingController();
+  bool _showWait = false;
+  bool _isProcessed = false;
+
 
   //--------------------------------------------------------------------------//
   @override
@@ -53,14 +54,10 @@ class _MyHomeState extends State<MyHome> {
 
   //--------------------------------------------------------------------------//
   Future<void> _init() async {
-    Widget newnote = IconButton(onPressed: _new_note, icon: Icon(Icons.add_comment_outlined));
-    Widget settings = IconButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => MySettings()));
-        },
-        icon: Icon(Icons.settings, color: Colors.white)
-    );
-    MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), [newnote, settings]));
+    Widget recheck = IconButton(onPressed: _reloadServerModel, icon: Icon(Icons.network_check, color: Colors.white));
+    Widget newnote = IconButton(onPressed: _newNote, icon: Icon(Icons.add_comment_outlined));
+    Widget shareAll = IconButton(onPressed: _shareAll, icon: Icon(Icons.share, color: Colors.white));
+    MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), [recheck, newnote, shareAll]));
   }
 
   //--------------------------------------------------------------------------//
@@ -69,8 +66,20 @@ class _MyHomeState extends State<MyHome> {
       _loadHistoryChats();
     });
     MyEventBus().on<NewChatBeginEvent>().listen((event) {
-      _new_note();
+      _newNote();
     });
+  }
+
+  //--------------------------------------------------------------------------//
+  void _reloadServerModel() async {
+    final result = await context.read<MainProvider>().checkServerConnection();
+    if (result) {
+      showToast(tr("l_success"), context: context, position: StyledToastPosition.center);
+    } else {
+      showToast(tr("l_error_url"), context: context, position: StyledToastPosition.center);
+    }
+    MyEventBus().fire(ReloadModelEvent());
+    setState(() {});
   }
 
   //--------------------------------------------------------------------------//
@@ -110,17 +119,30 @@ class _MyHomeState extends State<MyHome> {
   }
 
   //--------------------------------------------------------------------------//
-  void _new_note() {
+  void _shareAll() {
+    String sharedData = "";
+    _questions.forEach((item) {
+      sharedData += item["question"] + "\n\n" + item["answer"] + "\n\n" + item["engine"] + "\n" + item["created"] + "\n\n";
+    });
+    Share.share(sharedData);
+  }
+
+  //--------------------------------------------------------------------------//
+  void _newNote([String? question]) {
     final provider = context.read<MainProvider>();
     provider.curGroupId = Uuid().v4();
 
     _messages = [];
     _questions = [];
+
+    if (question != null) {
+      _questionController.text = question;
+    }
     setState(() {});
   }
 
   //--------------------------------------------------------------------------//
-  Future<void> startGeneration(String question) async {
+  Future<void> _startGeneration(String question) async {
     final provider = context.read<MainProvider>();
 
     String curAnswer = "...";
@@ -131,10 +153,12 @@ class _MyHomeState extends State<MyHome> {
       text: curAnswer,
     );
     _messages.insert(0, ansMwssage);
+    setState(() {});
 
     List<ollama.Message> qmsg = [];
 
     // add previous questions
+    // it's import for the model to understand the context
     _questions.forEach((item) {
       qmsg.add(ollama.Message(
         role: ollama.MessageRole.system,
@@ -174,6 +198,7 @@ class _MyHomeState extends State<MyHome> {
 
       // get answer from stream
       String answer = '';
+      _isProcessed = true;
       await for (final res in stream) {
         answer += (res.message.content ?? '');
         if (_messages.isNotEmpty) {
@@ -191,16 +216,19 @@ class _MyHomeState extends State<MyHome> {
         }
       }
 
+      // Add Model Name to Answer
+      answer += "\n\n_MyOllama - " + provider.selectedModel! + "_";
+      setState(() {});
+      _isProcessed = false;
+
       // save to DB
       await provider.qdb.insertQuestion(provider.curGroupId, provider.instruction, question, answer, _selectedImage, provider.selectedModel!);
+
+      // Drawer Menu Reload
+      MyEventBus().fire(RefreshMainListEvent());
+
+      // Reload History
       _loadHistoryChats();
-
-      //
-      final curList = await provider.qdb.getDetails(provider.curGroupId);
-      if (curList.length == 0) {
-        MyEventBus().fire(RefreshMainListEvent());
-      }
-
       _selectedImage = null;
     } catch (e) {
       _messages[0] = (_messages[0] as types.TextMessage).copyWith(text: tr("l_error_1"));
@@ -251,7 +279,7 @@ class _MyHomeState extends State<MyHome> {
     setState(() {
       _messages.insert(0, ask);
     });
-    await startGeneration(message.text);
+    await _startGeneration(message.text);
   }
 
   //--------------------------------------------------------------------------//
@@ -280,54 +308,88 @@ class _MyHomeState extends State<MyHome> {
   }
 
   //--------------------------------------------------------------------------//
-  Widget _textMessageBuilder(types.TextMessage message, {required int messageWidth, bool? showName}) {
+  void _menuRunner(int number, types.TextMessage message) async {
     final provider = context.read<MainProvider>();
-    final isOwnMessage = message.author.id == _user.id;
-    final messageKey = GlobalKey();
 
-    return GestureDetector(
-      onTap: () {
-        PopupMenu menu = PopupMenu(
-            context: context,
-            items: [
-              MenuItem(title: 'Copy', image: Icon(Icons.copy, color: Colors.white,)),
-              MenuItem(title: 'Share', image: Icon(Icons.share, color: Colors.white,)),
-              MenuItem(title: 'Delete', image: Icon(Icons.delete_outline, color: Colors.white,)),
-            ],
-            onClickMenu: (MenuItemProvider item) async {
-              if (message.metadata == null) return;
+    final id = message.metadata!['id'];
+    final record = await provider.qdb.getDetailsById(id);
+    if (record.length > 0) {
+      final question = record[0]["question"];
+      final answer = record[0]["answer"];
+      final created = record[0]["created"];
+      final model = record[0]["engine"];
+      final sharedData = "$question\n\n$answer\n\n$model\n$created";
 
-              final id = message.metadata!['id'];
-              final record = await provider.qdb.getDetailsById(id);
-              if (record.length == 0) return;
-
-              final question = record[0]["question"];
-              final answer = record[0]["answer"];
-              final created = record[0]["created"];
-              final model = record[0]["engine"];
-              final sharedData = "$question\n\n$answer\n\n$model\n$created";
-
-              if (item.menuTitle == "Copy") {
-                Clipboard.setData(ClipboardData(text: sharedData));
-                showToast(tr("l_copyed"),context:context);
-              } else if (item.menuTitle == "Share") {
-                Share.share(sharedData);
-              } else if (item.menuTitle == "Delete") {
-                final result = await AskDialog.show(context, title: tr("l_delete"), message: tr("l_delete_question"));
-                if (result == true) {
-                  await provider.qdb.deleteRecord(id);
-                  _loadHistoryChats();
-                }
-              }
+      if (number == 0) {
+        _newNote(question);
+      } else if (number == 1) {
+        Clipboard.setData(ClipboardData(text: sharedData));
+        showToast(tr("l_copyed"), context: context, position: StyledToastPosition.center);
+      } else if (number == 2) {
+        Share.share(sharedData);
+      } else if (number == 3) {
+        final result = await AskDialog.show(context, title: tr("l_delete"), message: tr("l_delete_question"));
+        if (result == true) {
+          await provider.qdb.deleteRecord(id);
+          // check is last data?
+          provider.qdb.getDetails(context.read<MainProvider>().curGroupId).then((value) {
+            if (value.length == 0) {
+              MyEventBus().fire(RefreshMainListEvent());
+              _newNote();
+            } else {
+              _loadHistoryChats();
             }
-        );
-        menu.show(widgetKey: messageKey);
-      },
-      child: Container(
-        key: messageKey,
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: MarkdownBody(data: message.text)
-      ),
+          });
+        }
+      }
+    }
+  }
+
+  //--------------------------------------------------------------------------//
+  Widget _messageMenu(types.TextMessage message) {
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        IconButton(onPressed: (){
+          _menuRunner(0, message);
+        }, icon: Icon(Icons.open_in_new, color: Colors.white,)),
+        IconButton(onPressed: (){
+          _menuRunner(1, message);
+        }, icon: Icon(Icons.copy, color: Colors.white,)),
+        IconButton(onPressed: (){
+          _menuRunner(2, message);
+        }, icon: Icon(Icons.share, color: Colors.white,)),
+        IconButton(onPressed: (){
+          _menuRunner(3, message);
+        }, icon: Icon(Icons.delete_outline, color: Colors.white,)),
+      ],
+    );
+  }
+
+  //--------------------------------------------------------------------------//
+  Widget _textMessageBuilder(types.TextMessage message, {required int messageWidth, bool? showName}) {
+    final isAnswer = message.author.id == _user.id;
+
+    return Container(
+      margin: EdgeInsets.all(16),
+      child: Column(
+        children: [
+          MarkdownBody(
+            data: message.text,
+            selectable: true,
+            onTapLink: (text, href, title) {
+              launchUrl(Uri.parse(href!));
+            },
+          ),
+          if (isAnswer && !_isProcessed) Column(
+            children: [
+              Divider(color: Colors.black12,),
+              _messageMenu(message)
+            ],
+          )
+        ],
+      )
     );
   }
 
@@ -344,20 +406,17 @@ class _MyHomeState extends State<MyHome> {
         messageInsetsHorizontal: 16,
         messageInsetsVertical: 10,
       ),
+      inputOptions: InputOptions(
+        textEditingController: _questionController,
+      ),
       messages: _messages,
       onAttachmentPressed: _handleAttachmentPressed,
       onPreviewDataFetched: _handlePreviewDataFetched,
       onSendPressed: _beginAsking,
-      showUserAvatars: false,
-      showUserNames: false,
-      disableImageGallery: true,
-      usePreviewData: false,
       user: _user,
       l10n: ChatL10nEn(
-        inputPlaceholder: tr("l_input_question"),
-        emptyChatPlaceholder: provider.serveConnected
-            ? tr("l_no_conversation")
-            : tr("l_no_server"),
+          inputPlaceholder: tr("l_input_question"),
+          emptyChatPlaceholder: provider.serveConnected ? tr("l_no_conversation") : tr("l_no_server")
       ),
       customMessageBuilder: _customMessageBuilder,
       textMessageBuilder: (message, {required messageWidth, required showName}) =>
@@ -373,15 +432,11 @@ class _MyHomeState extends State<MyHome> {
           FocusScope.of(context).requestFocus(FocusNode());
         },
         child: Scaffold(
-          body: Container(
-            child: Stack(
-              children: [
-                _chatUI(),
-                _showWait
-                    ? Center(child: CircularProgressIndicator())
-                    : SizedBox()
-              ],
-            ),
+          body: Stack(
+            children: [
+              _chatUI(),
+              _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
+            ],
           ),
         ));
   }

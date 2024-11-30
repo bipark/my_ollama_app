@@ -16,7 +16,7 @@
   "l_delete_all": "Delete all data",
   "l_myollama": "MyOllama",
   "l_version": "Version: ",
-  "l_input_question" : "Please enter a question",
+  "l_input_question" : "Enter a question",
   "l_no_conversation" : "Start a new conversation\nLLMs that support images can also attach images",
   "l_no_server": "No server is connected. \nPlease connect to a server in the settings and try again",
   "l_error_1": "An error occurred while communicating with the server, please check the server address in settings and try again",
@@ -28,5 +28,11 @@
   "l_q2": "How do I connect to the Olama server?",
   "l_a2": "Enter the address of the Olama server in the settings and save it, then you can connect to the server from the main screen",
   "l_q3": "How do I analyze images?",
-  "l_a3": "The ollama server should have a pre-installed LLM that can analyze images, for example, llama3.2. \n\nThen you can select an image in the app, ask questions and get answers."
+  "l_a3": "The ollama server should have a pre-installed LLM that can analyze images, for example, llama3.2. \n\nThen you can select an image in the app, ask questions and get answers.",
+  "l_success": "Connection success",
+  "l_error": "Connection failure",
+  "l_success_url": "You have been connected to the server",
+  "l_error_url": "Unable to connect to the server",
+  "l_invalid_url": "Invalid address",
+  "l_copyed": "Copied"
 }

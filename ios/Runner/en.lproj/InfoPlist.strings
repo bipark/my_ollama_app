@@ -6,4 +6,4 @@
   
 */
 CFBundleDisplayName = "My Ollama";
-NSPhotoLibraryUsageDescription = "To upload photos, App needs permission to use your photo album.";
+NSPhotoLibraryUsageDescription = "The app needs permission to use the photo album to analyze photos.";

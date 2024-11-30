@@ -41,11 +41,15 @@ class _MyDrawerState extends State<MyDrawer> {
       }
     });
 
-    MyEventBus().on<CloseDrawerEvent>().listen((event){
+    MyEventBus().on<CloseDrawerEvent>().listen((event) {
       _drawer.hideDrawer();
     });
-  }
 
+    MyEventBus().on<ReloadModelEvent>().listen((event) {
+      _selectModel();
+    });
+
+  }
 
   //--------------------------------------------------------------------------//
   void _handleMenuButtonPressed() {
@@ -87,8 +91,13 @@ class _MyDrawerState extends State<MyDrawer> {
               controller.open();
             }
           },
-          icon: Text(provider.selectedModel!, style: TextStyle(color: Colors.yellowAccent, fontWeight: FontWeight.bold)),
-          label: Icon(Icons.arrow_drop_down, color: Colors.white,),
+          icon: Text(provider.selectedModel!,
+              style: TextStyle(
+                  color: Colors.yellowAccent, fontWeight: FontWeight.bold)),
+          label: Icon(
+            Icons.arrow_drop_down,
+            color: Colors.white,
+          ),
         );
       },
     );
@@ -96,7 +105,6 @@ class _MyDrawerState extends State<MyDrawer> {
 
   //--------------------------------------------------------------------------//
   PreferredSizeWidget _appbar() {
-
     return AppBar(
       title: _selectModel(),
       leading: IconButton(
@@ -114,7 +122,7 @@ class _MyDrawerState extends State<MyDrawer> {
           },
         ),
       ),
-      actions: _action != null ? _action! :[],
+      actions: _action != null ? _action! : [],
     );
   }
 
@@ -137,15 +145,29 @@ class _MyDrawerState extends State<MyDrawer> {
                 SizedBox(width: 10),
                 Image.asset("assets/images/ollama.png", width: 24, height: 20),
                 SizedBox(width: 6),
-                Text(tr("l_myollama"), style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                Text(tr("l_myollama"),
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo)),
                 Spacer(),
-                IconButton(onPressed: (){
-                  MyEventBus().fire(NewChatBeginEvent());
-                  _drawer.hideDrawer();
-                }, icon: Icon(Icons.add_comment_outlined, color: Colors.black)),
-                IconButton(onPressed: (){
-                  MyEventBus().fire(RefreshMainListEvent());
-                }, icon: Icon(Icons.refresh, color: Colors.black)),
+                // IconButton(onPressed: (){
+                //   MyEventBus().fire(NewChatBeginEvent());
+                //   _drawer.hideDrawer();
+                // }, icon: Icon(Icons.add_comment_outlined, color: Colors.black)),
+                IconButton(
+                    onPressed: () {
+                      MyEventBus().fire(RefreshMainListEvent());
+                    },
+                    icon: Icon(Icons.refresh, color: Colors.black)),
+                IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => MySettings()));
+                    },
+                    icon: Icon(Icons.settings_outlined, color: Colors.black)),
               ],
             ),
           ),
@@ -158,20 +180,17 @@ class _MyDrawerState extends State<MyDrawer> {
   //--------------------------------------------------------------------------//
   @override
   Widget build(BuildContext context) {
-
     return AdvancedDrawer(
       backdropColor: Colors.white,
       controller: _drawer,
       animateChildDecoration: true,
       rtlOpening: false,
       openScale: 1.0,
-      openRatio: 0.7,
+      openRatio: 0.8,
       disabledGestures: true,
       child: Scaffold(
         appBar: _appbar(),
-        body: Container(
-            child: _currentWidget
-        ),
+        body: Container(child: _currentWidget),
       ),
       drawer: SafeArea(
         child: _listContainer(),

@@ -6,4 +6,4 @@
   
 */
 CFBundleDisplayName = "マイ・オーラマ";
-NSPhotoLibraryUsageDescription = "写真をアップロードするには、写真アルバムの使用許可が必要です。";
+NSPhotoLibraryUsageDescription = "アプリが写真を分析するためにフォトアルバムの使用権限が必要です。";
