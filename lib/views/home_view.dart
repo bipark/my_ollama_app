@@ -11,7 +11,6 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:uuid/uuid.dart';
-import 'package:ollama_dart/ollama_dart.dart' as ollama;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:image_picker/image_picker.dart';
@@ -19,6 +18,11 @@ import 'package:image_picker/image_picker.dart';
 import '../provider/main_provider.dart';
 import '../helpers/event_bus.dart';
 import '../widgets/dialogs.dart';
+import '../widgets/drop_menu.dart';
+import '../services/chat_service.dart';
+
+import 'settings.dart';
+
 
 class MyHome extends StatefulWidget {
   const MyHome({Key? key}) : super(key: key);
@@ -37,7 +41,7 @@ class _MyHomeState extends State<MyHome> {
   TextEditingController _questionController = TextEditingController();
   bool _showWait = false;
   bool _isProcessed = false;
-
+  late final ChatService _chatService;
 
   //--------------------------------------------------------------------------//
   @override
@@ -49,15 +53,32 @@ class _MyHomeState extends State<MyHome> {
 
   @override
   void dispose() {
+    _questionController.dispose();
+    _chatService.dispose();
     super.dispose();
   }
 
   //--------------------------------------------------------------------------//
   Future<void> _init() async {
-    Widget recheck = IconButton(onPressed: _reloadServerModel, icon: Icon(Icons.network_check, color: Colors.white));
-    Widget newnote = IconButton(onPressed: _newNote, icon: Icon(Icons.add_comment_outlined));
-    Widget shareAll = IconButton(onPressed: _shareAll, icon: Icon(Icons.share, color: Colors.white));
-    MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), [recheck, newnote, shareAll]));
+    _chatService = ChatService(
+      context: context,
+      questions: _questions,
+      messages: _messages,
+      answerer: _answerer,
+      user: _user,
+      setState: () => setState(() {})
+    );
+
+    Widget newnote = IconButton(onPressed: _newNote, icon: Icon(Icons.note_add_outlined));
+    MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), [
+      newnote,
+      DropMenu(_reloadServerModel, _newNote, _shareAll, _showSettings)
+    ]));
+  }
+
+  //--------------------------------------------------------------------------//
+  void _showSettings() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => MySettings()));
   }
 
   //--------------------------------------------------------------------------//
@@ -67,6 +88,11 @@ class _MyHomeState extends State<MyHome> {
     });
     MyEventBus().on<NewChatBeginEvent>().listen((event) {
       _newNote();
+    });
+    MyEventBus().on<ChatDoneEvent>().listen((event) {
+      _loadHistoryChats();
+      _isProcessed = false;
+      setState(() {});
     });
   }
 
@@ -121,6 +147,8 @@ class _MyHomeState extends State<MyHome> {
   //--------------------------------------------------------------------------//
   void _shareAll() {
     String sharedData = "";
+    if (_questions.length == 0) return;
+
     _questions.forEach((item) {
       sharedData += item["question"] + "\n\n" + item["answer"] + "\n\n" + item["engine"] + "\n" + item["created"] + "\n\n";
     });
@@ -130,6 +158,7 @@ class _MyHomeState extends State<MyHome> {
   //--------------------------------------------------------------------------//
   void _newNote([String? question]) {
     final provider = context.read<MainProvider>();
+
     provider.curGroupId = Uuid().v4();
 
     _messages = [];
@@ -143,8 +172,8 @@ class _MyHomeState extends State<MyHome> {
 
   //--------------------------------------------------------------------------//
   Future<void> _startGeneration(String question) async {
-    final provider = context.read<MainProvider>();
 
+    _isProcessed = true;
     String curAnswer = "...";
     types.TextMessage ansMwssage = types.TextMessage(
       author: _user,
@@ -155,86 +184,18 @@ class _MyHomeState extends State<MyHome> {
     _messages.insert(0, ansMwssage);
     setState(() {});
 
-    List<ollama.Message> qmsg = [];
 
-    // add previous questions
-    // it's import for the model to understand the context
-    _questions.forEach((item) {
-      qmsg.add(ollama.Message(
-        role: ollama.MessageRole.system,
-        content: item["question"],
-      ));
-      qmsg.add(ollama.Message(
-        role: ollama.MessageRole.user,
-        content: item["answer"],
-      ));
+    // 스트림 구독 설정
+    _chatService.selectedImage = _selectedImage;
+    _chatService.messageStream.listen((content) {
+      if (_messages.isNotEmpty) {
+        _messages[0] = (_messages[0] as types.TextMessage).copyWith(text: content);
+        setState(() {});
+      }
     });
 
-    // add instruction
-    qmsg.add(ollama.Message(
-      role: ollama.MessageRole.system,
-      content: provider.instruction,
-    ));
-
-    // add current question
-    qmsg.add(ollama.Message(
-      role: ollama.MessageRole.user,
-      content: question,
-      images: _selectedImage != null ? [_selectedImage!] : [],
-    ));
-
-    // generate chat
-    try {
-      final stream = provider.ollient!.generateChatCompletionStream(
-        request: ollama.GenerateChatCompletionRequest(
-          model: provider.selectedModel!,
-          messages: qmsg,
-          keepAlive: 1,
-          options: ollama.RequestOptions(
-            temperature: provider.temperature,
-          ),
-        ),
-      );
-
-      // get answer from stream
-      String answer = '';
-      _isProcessed = true;
-      await for (final res in stream) {
-        answer += (res.message.content ?? '');
-        if (_messages.isNotEmpty) {
-          if (_messages[0] is types.TextMessage) {
-            _messages[0] = (_messages[0] as types.TextMessage).copyWith(text: answer);
-          } else {
-            _messages[0] = types.TextMessage(
-              author: _answerer,
-              createdAt: DateTime.now().millisecondsSinceEpoch,
-              id: const Uuid().v4(),
-              text: answer,
-            );
-          }
-          setState(() {});
-        }
-      }
-
-      // Add Model Name to Answer
-      answer += "\n\n_MyOllama - " + provider.selectedModel! + "_";
-      setState(() {});
-      _isProcessed = false;
-
-      // save to DB
-      await provider.qdb.insertQuestion(provider.curGroupId, provider.instruction, question, answer, _selectedImage, provider.selectedModel!);
-
-      // Drawer Menu Reload
-      MyEventBus().fire(RefreshMainListEvent());
-
-      // Reload History
-      _loadHistoryChats();
-      _selectedImage = null;
-    } catch (e) {
-      _messages[0] = (_messages[0] as types.TextMessage).copyWith(text: tr("l_error_1"));
-      setState(() {});
-      print(e);
-    }
+    // 생성 시작
+    await _chatService.startGeneration(question);
   }
 
   //--------------------------------------------------------------------------//
@@ -399,7 +360,8 @@ class _MyHomeState extends State<MyHome> {
 
     return Chat(
       theme: DefaultChatTheme(
-        primaryColor: Colors.orangeAccent,
+        primaryColor: Colors.white,
+        secondaryColor: Colors.orangeAccent,
         inputBackgroundColor: Colors.indigo,
         inputTextCursorColor: Colors.white,
         backgroundColor: Colors.grey.shade200,
@@ -413,7 +375,7 @@ class _MyHomeState extends State<MyHome> {
       onAttachmentPressed: _handleAttachmentPressed,
       onPreviewDataFetched: _handlePreviewDataFetched,
       onSendPressed: _beginAsking,
-      user: _user,
+      user: _answerer,
       l10n: ChatL10nEn(
           inputPlaceholder: tr("l_input_question"),
           emptyChatPlaceholder: provider.serveConnected ? tr("l_no_conversation") : tr("l_no_server")
@@ -428,16 +390,16 @@ class _MyHomeState extends State<MyHome> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-        onTap: () {
-          FocusScope.of(context).requestFocus(FocusNode());
-        },
-        child: Scaffold(
-          body: Stack(
-            children: [
-              _chatUI(),
-              _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
-            ],
-          ),
-        ));
+      onTap: () {
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            _chatUI(),
+            _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
+          ],
+        ),
+      ));
   }
 }

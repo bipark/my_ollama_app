@@ -43,3 +43,7 @@ class NewChatBeginEvent {
 class ReloadModelEvent {
   ReloadModelEvent();
 }
+
+class ChatDoneEvent {
+  ChatDoneEvent();
+}

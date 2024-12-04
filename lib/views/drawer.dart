@@ -9,7 +9,6 @@ import '../helpers/event_bus.dart';
 import '../widgets/title_list.dart';
 
 import 'home_view.dart';
-import 'settings.dart';
 
 class MyDrawer extends StatefulWidget {
   const MyDrawer({super.key});
@@ -91,13 +90,8 @@ class _MyDrawerState extends State<MyDrawer> {
               controller.open();
             }
           },
-          icon: Text(provider.selectedModel!,
-              style: TextStyle(
-                  color: Colors.yellowAccent, fontWeight: FontWeight.bold)),
-          label: Icon(
-            Icons.arrow_drop_down,
-            color: Colors.white,
-          ),
+          icon: Text(provider.selectedModel!, style: TextStyle(color: Colors.yellowAccent, fontWeight: FontWeight.bold)),
+          label: Icon(Icons.arrow_drop_down, color: Colors.white,),
         );
       },
     );
@@ -145,29 +139,12 @@ class _MyDrawerState extends State<MyDrawer> {
                 SizedBox(width: 10),
                 Image.asset("assets/images/ollama.png", width: 24, height: 20),
                 SizedBox(width: 6),
-                Text(tr("l_myollama"),
-                    style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo)),
+                Text(tr("l_myollama"), style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.indigo)),
                 Spacer(),
-                // IconButton(onPressed: (){
-                //   MyEventBus().fire(NewChatBeginEvent());
-                //   _drawer.hideDrawer();
-                // }, icon: Icon(Icons.add_comment_outlined, color: Colors.black)),
                 IconButton(
                     onPressed: () {
                       MyEventBus().fire(RefreshMainListEvent());
-                    },
-                    icon: Icon(Icons.refresh, color: Colors.black)),
-                IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => MySettings()));
-                    },
-                    icon: Icon(Icons.settings_outlined, color: Colors.black)),
+                    }, icon: Icon(Icons.refresh, color: Colors.black)),
               ],
             ),
           ),

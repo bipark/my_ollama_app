@@ -2,7 +2,7 @@ name: my_ollama
 description: "MyOllama"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.7+41130
+version: 1.0.8+41204
 
 environment:
   sdk: ^3.5.4

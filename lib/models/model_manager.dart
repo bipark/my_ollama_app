@@ -122,10 +122,9 @@ class QDatabase {
   //--------------------------------------------------------------------------//
   Future<List> searchKeywords(String keyword) async {
     final db = await _instance.init();
-    final sql = "SELECT m.* FROM questions m "+
-        "LEFT JOIN qdetails d ON m.id = d.pid "+
-        "WHERE d.question LIKE ? OR d.answer LIKE ? "+
-        "ORDER BY m.created DESC";
+    final sql = "SELECT * FROM questions m "+
+        "WHERE question LIKE ? OR answer LIKE ? "+
+        "ORDER BY created DESC";
     return await db.rawQuery(sql, ["%$keyword%", "%$keyword%"]);
   }
 

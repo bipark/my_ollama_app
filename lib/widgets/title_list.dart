@@ -18,6 +18,8 @@ class _TitleListState extends State<TitleList> {
   bool _showWait = false;
   List _titles = [];
   int _selectedIndex = 0;
+  TextEditingController _search = TextEditingController();
+
 
   @override
   void initState() {
@@ -102,6 +104,7 @@ class _TitleListState extends State<TitleList> {
     );
   }
 
+  //--------------------------------------------------------------------------//
   void _selectTitle(int index) {
     final provider = context.read<MainProvider>();
 
@@ -113,30 +116,93 @@ class _TitleListState extends State<TitleList> {
   }
 
   //--------------------------------------------------------------------------//
+  void _startSearch() async {
+    _showWait = true;
+    setState(() {});
+
+    final provider = context.read<MainProvider>();
+    if (_search.text != "") {
+      _titles = await provider.qdb.searchKeywords(_search.text);
+    }
+    _showWait = false;
+    setState(() {});
+  }
+
+  //--------------------------------------------------------------------------//
+  Widget _searchPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(width: 1, color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _search,
+              decoration: InputDecoration(
+                hintText: tr("l_search"),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.fromLTRB(10, 0, 10, 0),
+              ),
+              onSubmitted: (String value) {
+                _startSearch();
+              },
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: _startSearch,
+          ),
+          IconButton(
+            icon: Icon(Icons.clear),
+            onPressed: () {
+              FocusScope.of(context).requestFocus(FocusNode());
+              _search.text = "";
+              _loadData();
+            },
+          )
+        ],
+      ),
+    );
+  }
+
+
+  //--------------------------------------------------------------------------//
+  Widget _listView() {
+    return CustomScrollView(
+      slivers: [
+        SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              return InkWell(
+                child: _titlePanel(index),
+                onTap: (){
+                  _selectTitle(index);
+                },
+              );
+            }, childCount: _titles.length)
+        )
+      ],
+    );
+  }
+
+  //--------------------------------------------------------------------------//
   @override
   Widget build(BuildContext context) {
 
     return Container(
       child: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  return InkWell(
-                    child: _titlePanel(index),
-                    onTap: (){
-                      _selectTitle(index);
-                    },
-                  );
-                }, childCount: _titles.length)
-              )
+          Column(
+            children: [
+              _searchPanel(),
+              Expanded(child: _listView())
             ],
           ),
           _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
         ],
       ),
     );
+
   }
 
 }
