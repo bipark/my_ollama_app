@@ -65,7 +65,7 @@ You can use MyOllama to access Ollama and utilize various LLMs. MyOllama - Run L
 ## Download App 
 
 - For those who have difficulty building, you can download the app from the link below.
-- [https://apps.apple.com/kr/app/my-ollama/id6738298481](https://apps.apple.com/kr/app/my-ollama/id6738298481)
+- [https://apps.apple.com/us/app/my-ollama/id6738298481](https://apps.apple.com/us/app/my-ollama/id6738298481)
 
 ## License
 
