@@ -27,3 +27,8 @@
 - Add token usage 
 - Add Search function
 
+### 2024/12/16 - v1.1.0
+
+- Support iPad
+- Support Mac Desktop
+- fix some bugs
