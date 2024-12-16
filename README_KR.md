@@ -29,7 +29,7 @@ MyOllama를 사용하여 Ollama에 접속하여 다양한 LLM을 활용할 수 �
 - 이미지 인식 기능 지원 (해당 기능을 지원하는 모델에 한함)
 - 직관적인 채팅 형식의 UI
 - 대화 기록: 채팅 세션 저장 및 관리
-- iOS와 Android 지원
+- iPhone, iPad, Android, Mac Desktop 지원
 - 한국어, English, 日本語를 지원
 
 ![poster](./ipad.png)

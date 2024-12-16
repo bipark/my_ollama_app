@@ -30,7 +30,7 @@ You can use MyOllama to access Ollama and utilize various LLMs. MyOllama - Run L
 - Supports image recognition (only on models that support it)
 - Intuitive chat-like UI
 - Conversation history: save and manage chat sessions
-- Supports iOS and Android
+- Supports iPhone, iPad, Android, Mac Desktop
 - Supports Korean, English, and Japanese
 - Support Markdown format
 
