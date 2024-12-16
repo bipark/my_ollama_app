@@ -31,6 +31,7 @@ MyOllama를 사용하여 Ollama에 접속하여 다양한 LLM을 활용할 수 �
 - 대화 기록: 채팅 세션 저장 및 관리
 - iOS와 Android 지원
 - 한국어, English, 日本語를 지원
+- iPad, Mac Desktop 지원
 
 
 ## 사용 방법

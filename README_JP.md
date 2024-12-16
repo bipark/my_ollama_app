@@ -31,6 +31,8 @@ MyOllamaを使用してOllamaに接続し、様々なLLMを活用することが
 - 会話記録：チャットセッションの保存と管理
 - iOSとAndroidをサポート
 - 韓国語、English、日本語をサポート
+- Support iPad, Mac Desktop
+
 
 ## 使い方
 
