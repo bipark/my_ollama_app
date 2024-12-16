@@ -1,34 +1,36 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'views/drawer.dart';
+import 'views/desktop_view.dart';
 import 'provider/main_provider.dart';
+import 'utils/platform_utils.dart';
 
 //--------------------------------------------------------------------------//
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => MainProvider()),
-      ],
-      child: EasyLocalization(
-          supportedLocales: [Locale('en', 'US'), Locale('ko', 'KR'), Locale('ja', 'JP')],
-          path: 'assets/translations',
-          fallbackLocale: Locale('en', 'US'),
-          child: MyOllama()
-      ),
-    )
-  );
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => MainProvider()),
+    ],
+    child: EasyLocalization(
+        supportedLocales: [
+          Locale('en', 'US'),
+          Locale('ko', 'KR'),
+          Locale('ja', 'JP')
+        ],
+        path: 'assets/translations',
+        fallbackLocale: Locale('en', 'US'),
+        child: MyOllama()),
+  ));
 }
-
 
 //--------------------------------------------------------------------------//
 class MyOllama extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -89,7 +91,6 @@ class _InitializationWrapperState extends State<InitializationWrapper> {
 
   @override
   Widget build(BuildContext context) {
-
     return Consumer<MainProvider>(
       builder: (context, provider, _) {
         if (!provider.isInitialized) {
@@ -99,13 +100,17 @@ class _InitializationWrapperState extends State<InitializationWrapper> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text('Initializing...').tr(),
                 ],
               ),
             ),
           );
         }
 
-        return MyDrawer();
+        return isDesktopOrTablet()
+            ? DesktopView()
+            : MyDrawer();
       },
     );
   }

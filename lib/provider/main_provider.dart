@@ -9,6 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/model_manager.dart';
+import '../helpers/event_bus.dart';
 
 final FEED_IMAGE_SIZE = 200.0;
 
@@ -128,13 +129,25 @@ class MainProvider with ChangeNotifier {
 
   //--------------------------------------------------------------------------//
   Future<bool> setBaseUrl(String url) async {
+    final model = await _prefs.getString("selectedModel");
+
     baseUrl = url;
     _prefs.setString("baseUrl", url);
 
     ollient = null;
     ollient = OllamaClient(baseUrl: baseUrl + "/api");
     try {
-      await ollient!.listModels();
+      final res = await ollient!.listModels();
+      if (res.models != null) {
+        modelList = res.models!;
+
+        if (modelList!.length > 0) {
+          bool modelExists = modelList!.any((m) => m.model == model);
+          selectedModel = modelExists ? model : modelList!.first.model;
+          serveConnected = true;
+        }
+        MyEventBus().fire(ReloadModelEvent());
+      }
       notifyListeners();
       return true;
     } catch (e) {

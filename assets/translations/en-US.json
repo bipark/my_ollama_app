@@ -34,5 +34,9 @@
   "l_success_url": "You have been connected to the server",
   "l_error_url": "Unable to connect to the server",
   "l_invalid_url": "Invalid address",
-  "l_copyed": "Copied"
+  "l_copyed": "Copied",
+  "l_server_check": "Server Check",
+  "l_new_chat": "New chat",
+  "l_share_all": "Share all",
+  "l_search": "Search"
 }

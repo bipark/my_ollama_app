@@ -42,7 +42,7 @@ class _TitleListState extends State<TitleList> {
 
 
   //--------------------------------------------------------------------------//
-  void _loadData({bool refresh = false}) async {
+  Future<void> _loadData({bool refresh = false}) async {
     if (mounted) {
       _showWait = true;
       setState(() {});
@@ -166,43 +166,64 @@ class _TitleListState extends State<TitleList> {
     );
   }
 
+  //--------------------------------------------------------------------------//
+  Future<void> _onRefresh() async {
+    return _loadData(refresh: true);
+  }
 
   //--------------------------------------------------------------------------//
-  Widget _listView() {
-    return CustomScrollView(
-      slivers: [
-        SliverList(
-            delegate: SliverChildBuilderDelegate((context, index) {
-              return InkWell(
-                child: _titlePanel(index),
-                onTap: (){
-                  _selectTitle(index);
-                },
-              );
-            }, childCount: _titles.length)
-        )
-      ],
+  Widget _buildList() {
+    if (_showWait) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (_titles.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _onRefresh,
+        child: ListView(
+          children: [
+            Container(
+              height: 100,
+              alignment: Alignment.center,
+              child: Text(tr("l_no_items")),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: ListView.builder(
+        itemCount: _titles.length,
+        itemBuilder: (context, index) {
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                _selectTitle(index);
+              },
+              child: _titlePanel(index),
+            ),
+          );
+        },
+      ),
     );
   }
 
   //--------------------------------------------------------------------------//
   @override
   Widget build(BuildContext context) {
-
     return Container(
-      child: Stack(
+      color: Colors.white,
+      child: Column(
         children: [
-          Column(
-            children: [
-              _searchPanel(),
-              Expanded(child: _listView())
-            ],
+          _searchPanel(),
+          Expanded(
+            child: _buildList(),
           ),
-          _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
         ],
       ),
     );
-
   }
-
 }

@@ -7,8 +7,10 @@ import 'package:easy_localization/easy_localization.dart';
 import '../provider/main_provider.dart';
 import '../helpers/event_bus.dart';
 import '../widgets/title_list.dart';
+import '../widgets/model_selector.dart';
+import '../widgets/list_header.dart';
 
-import 'home_view.dart';
+import 'chat_view.dart';
 
 class MyDrawer extends StatefulWidget {
   const MyDrawer({super.key});
@@ -21,14 +23,13 @@ class _MyDrawerState extends State<MyDrawer> {
   final _drawer = AdvancedDrawerController();
   List<Widget>? _action;
   Widget? _currentWidget;
-  final MenuController _menuController = MenuController();
 
   //--------------------------------------------------------------------------//
   @override
   void initState() {
     super.initState();
     _initEventConnector();
-    _currentWidget = MyHome();
+    _currentWidget = const ChatView();
   }
 
   //--------------------------------------------------------------------------//
@@ -45,9 +46,8 @@ class _MyDrawerState extends State<MyDrawer> {
     });
 
     MyEventBus().on<ReloadModelEvent>().listen((event) {
-      _selectModel();
+      setState(() {}); // Just refresh the state to rebuild ModelSelector
     });
-
   }
 
   //--------------------------------------------------------------------------//
@@ -56,58 +56,16 @@ class _MyDrawerState extends State<MyDrawer> {
   }
 
   //--------------------------------------------------------------------------//
-  Widget _selectModel() {
-    final provider = context.read<MainProvider>();
-    List models = [];
-    if (provider.modelList != null) {
-      models = provider.modelList!.map((Model e) => e.model).toList();
-    } else {
-      models = [provider.selectedModel];
-    }
-
-    return MenuAnchor(
-      alignmentOffset: Offset(0, 8),
-      controller: _menuController,
-      menuChildren: <Widget>[
-        for (final String option in models)
-          MenuItemButton(
-            onPressed: () {
-              setState(() {
-                provider.selectedModel = option;
-                provider.setSelectedModel(option);
-                _menuController.close();
-              });
-            },
-            child: Text(option, style: TextStyle(color: Colors.black)),
-          ),
-      ],
-      builder: (context, controller, child) {
-        return TextButton.icon(
-          onPressed: () {
-            if (controller.isOpen) {
-              controller.close();
-            } else {
-              controller.open();
-            }
-          },
-          icon: Text(provider.selectedModel!, style: TextStyle(color: Colors.yellowAccent, fontWeight: FontWeight.bold)),
-          label: Icon(Icons.arrow_drop_down, color: Colors.white,),
-        );
-      },
-    );
-  }
-
-  //--------------------------------------------------------------------------//
   PreferredSizeWidget _appbar() {
     return AppBar(
-      title: _selectModel(),
+      title: const ModelSelector(),
       leading: IconButton(
         onPressed: _handleMenuButtonPressed,
         icon: ValueListenableBuilder<AdvancedDrawerValue>(
           valueListenable: _drawer,
           builder: (_, value, __) {
             return AnimatedSwitcher(
-              duration: Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 250),
               child: Icon(
                 value.visible ? Icons.clear : Icons.menu,
                 key: ValueKey<bool>(value.visible),
@@ -116,7 +74,7 @@ class _MyDrawerState extends State<MyDrawer> {
           },
         ),
       ),
-      actions: _action != null ? _action! : [],
+      actions: _action,
     );
   }
 
@@ -124,30 +82,11 @@ class _MyDrawerState extends State<MyDrawer> {
   Widget _listContainer() {
     return Container(
       color: Colors.white,
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-            ),
-            height: 56,
-            child: Row(
-              children: [
-                SizedBox(width: 10),
-                Image.asset("assets/images/ollama.png", width: 24, height: 20),
-                SizedBox(width: 6),
-                Text(tr("l_myollama"), style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.indigo)),
-                Spacer(),
-                IconButton(
-                    onPressed: () {
-                      MyEventBus().fire(RefreshMainListEvent());
-                    }, icon: Icon(Icons.refresh, color: Colors.black)),
-              ],
-            ),
-          ),
+          ListHeader(),
           Expanded(child: TitleList()),
         ],
       ),
@@ -173,6 +112,5 @@ class _MyDrawerState extends State<MyDrawer> {
         child: _listContainer(),
       ),
     );
-    ;
   }
 }

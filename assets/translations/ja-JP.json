@@ -34,5 +34,9 @@
   "l_success_url": "サーバーに接続しました",
   "l_error_url": "サーバーに接続できません",
   "l_invalid_url": "無効なアドレスです。",
-  "l_copyed": "コピー済み"
+  "l_copyed": "コピー済み",
+  "l_server_check": "サーバー接続状態の確認",
+  "l_new_chat": "新しい会話",
+  "l_share_all": "全体共有",
+  "l_search": "検索"
 }

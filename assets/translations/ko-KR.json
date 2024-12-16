@@ -34,5 +34,9 @@
   "l_success_url": "서버에 연결되었습니다.",
   "l_error_url": "서버에 연결할 수 없습니다.",
   "l_invalid_url": "유효하지 않은 주소입니다.",
-  "l_copyed": "복사되었습니다"
+  "l_copyed": "복사되었습니다",
+  "l_server_check": "서버연결상태확인",
+  "l_new_chat": "새 대화",
+  "l_share_all": "전체 공유",
+  "l_search": "검색"
 }

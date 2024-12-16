@@ -22,21 +22,22 @@ import '../widgets/drop_menu.dart';
 import '../services/chat_service.dart';
 
 import 'settings.dart';
+import '../utils/platform_utils.dart';
 
-
-class MyHome extends StatefulWidget {
-  const MyHome({Key? key}) : super(key: key);
+class ChatView extends StatefulWidget {
+  const ChatView({Key? key}) : super(key: key);
 
   @override
-  createState() => _MyHomeState();
+  createState() => _ChatViewState();
 }
 
-class _MyHomeState extends State<MyHome> {
+class _ChatViewState extends State<ChatView> {
   final ImagePicker _picker = ImagePicker();
   List<types.Message> _messages = [];
   List _questions = [];
   final _user = const types.User(id: '82091008-a484-4a89-ae75-a22bf8d6f3ac');
-  final _answerer = const types.User(id: '82091008-a484-4a89-ae75-a22bf8d6f3ad');
+  final _answerer =
+      const types.User(id: '82091008-a484-4a89-ae75-a22bf8d6f3ad');
   String? _selectedImage;
   TextEditingController _questionController = TextEditingController();
   bool _showWait = false;
@@ -61,24 +62,63 @@ class _MyHomeState extends State<MyHome> {
   //--------------------------------------------------------------------------//
   Future<void> _init() async {
     _chatService = ChatService(
-      context: context,
-      questions: _questions,
-      messages: _messages,
-      answerer: _answerer,
-      user: _user,
-      setState: () => setState(() {})
-    );
+        context: context,
+        questions: _questions,
+        messages: _messages,
+        answerer: _answerer,
+        user: _user,
+        setState: () => setState(() {}));
 
-    Widget newnote = IconButton(onPressed: _newNote, icon: Icon(Icons.note_add_outlined));
-    MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), [
-      newnote,
+    final rightMenu = [
+      IconButton(onPressed: _newNote, icon: Icon(Icons.note_add_outlined)),
       DropMenu(_reloadServerModel, _newNote, _shareAll, _showSettings)
-    ]));
+    ];
+    MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), rightMenu));
   }
 
   //--------------------------------------------------------------------------//
   void _showSettings() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => MySettings()));
+    if (isDesktopOrTablet()) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          final size = MediaQuery.of(context).size;
+          return Dialog(
+            child: Container(
+              width: size.width * 0.8,
+              height: size.height * 0.8,
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(tr("l_settings"),
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      Spacer(),
+                      IconButton(
+                        icon: Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Expanded(
+                    child: MySettings(),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const MySettings()),
+      );
+    }
   }
 
   //--------------------------------------------------------------------------//
@@ -100,9 +140,11 @@ class _MyHomeState extends State<MyHome> {
   void _reloadServerModel() async {
     final result = await context.read<MainProvider>().checkServerConnection();
     if (result) {
-      showToast(tr("l_success"), context: context, position: StyledToastPosition.center);
+      showToast(tr("l_success"),
+          context: context, position: StyledToastPosition.center);
     } else {
-      showToast(tr("l_error_url"), context: context, position: StyledToastPosition.center);
+      showToast(tr("l_error_url"),
+          context: context, position: StyledToastPosition.center);
     }
     MyEventBus().fire(ReloadModelEvent());
     setState(() {});
@@ -114,13 +156,17 @@ class _MyHomeState extends State<MyHome> {
     setState(() {});
 
     _messages = [];
-    _questions = await context.read<MainProvider>().qdb.getDetails(context.read<MainProvider>().curGroupId);
+    _questions = await context
+        .read<MainProvider>()
+        .qdb
+        .getDetails(context.read<MainProvider>().curGroupId);
     _questions.reversed.forEach((item) {
       if (item["image"] != null) {
         _makeImageMessageAdd(item["image"]);
       }
       int qtime = DateTime.parse(item["created"]).millisecondsSinceEpoch;
-      _makeMessageAdd(_answerer, item["question"], Uuid().v4(), qtime, item["id"]);
+      _makeMessageAdd(
+          _answerer, item["question"], Uuid().v4(), qtime, item["id"]);
 
       String answer = item["answer"];
       _makeMessageAdd(_user, answer, Uuid().v4(), qtime, item["id"]);
@@ -131,7 +177,8 @@ class _MyHomeState extends State<MyHome> {
   }
 
   //--------------------------------------------------------------------------//
-  void _makeMessageAdd(types.User user, String text, String unique, int time, [int? id = null]) async {
+  void _makeMessageAdd(types.User user, String text, String unique, int time,
+      [int? id = null]) async {
     final msg = types.TextMessage(
       author: user,
       createdAt: time,
@@ -150,7 +197,14 @@ class _MyHomeState extends State<MyHome> {
     if (_questions.length == 0) return;
 
     _questions.forEach((item) {
-      sharedData += item["question"] + "\n\n" + item["answer"] + "\n\n" + item["engine"] + "\n" + item["created"] + "\n\n";
+      sharedData += item["question"] +
+          "\n\n" +
+          item["answer"] +
+          "\n\n" +
+          item["engine"] +
+          "\n" +
+          item["created"] +
+          "\n\n";
     });
     Share.share(sharedData);
   }
@@ -160,7 +214,6 @@ class _MyHomeState extends State<MyHome> {
     final provider = context.read<MainProvider>();
 
     provider.curGroupId = Uuid().v4();
-
     _messages = [];
     _questions = [];
 
@@ -172,7 +225,6 @@ class _MyHomeState extends State<MyHome> {
 
   //--------------------------------------------------------------------------//
   Future<void> _startGeneration(String question) async {
-
     _isProcessed = true;
     String curAnswer = "...";
     types.TextMessage ansMwssage = types.TextMessage(
@@ -184,12 +236,12 @@ class _MyHomeState extends State<MyHome> {
     _messages.insert(0, ansMwssage);
     setState(() {});
 
-
     // 스트림 구독 설정
     _chatService.selectedImage = _selectedImage;
     _chatService.messageStream.listen((content) {
       if (_messages.isNotEmpty) {
-        _messages[0] = (_messages[0] as types.TextMessage).copyWith(text: content);
+        _messages[0] =
+            (_messages[0] as types.TextMessage).copyWith(text: content);
         setState(() {});
       }
     });
@@ -204,8 +256,7 @@ class _MyHomeState extends State<MyHome> {
         source: ImageSource.gallery,
         imageQuality: 80,
         maxWidth: 500,
-        maxHeight: 500
-    );
+        maxHeight: 500);
     if (image != null) {
       File file = File(image.path);
       List<int> imageBytes = file.readAsBytesSync();
@@ -215,7 +266,8 @@ class _MyHomeState extends State<MyHome> {
   }
 
   //--------------------------------------------------------------------------//
-  void _handlePreviewDataFetched(types.TextMessage message, types.PreviewData previewData) {
+  void _handlePreviewDataFetched(
+      types.TextMessage message, types.PreviewData previewData) {
     final index = _messages.indexWhere((element) => element.id == message.id);
     final updatedMessage = (_messages[index] as types.TextMessage).copyWith(
       previewData: previewData,
@@ -256,7 +308,8 @@ class _MyHomeState extends State<MyHome> {
   }
 
   //--------------------------------------------------------------------------//
-  Widget _customMessageBuilder(types.CustomMessage message, {required int messageWidth}) {
+  Widget _customMessageBuilder(types.CustomMessage message,
+      {required int messageWidth}) {
     if (message.metadata!['type'] == 'image') {
       return RepaintBoundary(
         child: Image.memory(
@@ -285,15 +338,19 @@ class _MyHomeState extends State<MyHome> {
         _newNote(question);
       } else if (number == 1) {
         Clipboard.setData(ClipboardData(text: sharedData));
-        showToast(tr("l_copyed"), context: context, position: StyledToastPosition.center);
+        showToast(tr("l_copyed"),
+            context: context, position: StyledToastPosition.center);
       } else if (number == 2) {
         Share.share(sharedData);
       } else if (number == 3) {
-        final result = await AskDialog.show(context, title: tr("l_delete"), message: tr("l_delete_question"));
+        final result = await AskDialog.show(context,
+            title: tr("l_delete"), message: tr("l_delete_question"));
         if (result == true) {
           await provider.qdb.deleteRecord(id);
           // check is last data?
-          provider.qdb.getDetails(context.read<MainProvider>().curGroupId).then((value) {
+          provider.qdb
+              .getDetails(context.read<MainProvider>().curGroupId)
+              .then((value) {
             if (value.length == 0) {
               MyEventBus().fire(RefreshMainListEvent());
               _newNote();
@@ -308,50 +365,72 @@ class _MyHomeState extends State<MyHome> {
 
   //--------------------------------------------------------------------------//
   Widget _messageMenu(types.TextMessage message) {
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        IconButton(onPressed: (){
-          _menuRunner(0, message);
-        }, icon: Icon(Icons.open_in_new, color: Colors.white,)),
-        IconButton(onPressed: (){
-          _menuRunner(1, message);
-        }, icon: Icon(Icons.copy, color: Colors.white,)),
-        IconButton(onPressed: (){
-          _menuRunner(2, message);
-        }, icon: Icon(Icons.share, color: Colors.white,)),
-        IconButton(onPressed: (){
-          _menuRunner(3, message);
-        }, icon: Icon(Icons.delete_outline, color: Colors.white,)),
+        IconButton(
+            onPressed: () {
+              _menuRunner(0, message);
+            },
+            icon: Icon(
+              Icons.open_in_new,
+              color: Colors.white,
+            )),
+        IconButton(
+            onPressed: () {
+              _menuRunner(1, message);
+            },
+            icon: Icon(
+              Icons.copy,
+              color: Colors.white,
+            )),
+        IconButton(
+            onPressed: () {
+              _menuRunner(2, message);
+            },
+            icon: Icon(
+              Icons.share,
+              color: Colors.white,
+            )),
+        IconButton(
+            onPressed: () {
+              _menuRunner(3, message);
+            },
+            icon: Icon(
+              Icons.delete_outline,
+              color: Colors.white,
+            )),
       ],
     );
   }
 
   //--------------------------------------------------------------------------//
-  Widget _textMessageBuilder(types.TextMessage message, {required int messageWidth, bool? showName}) {
+  Widget _textMessageBuilder(types.TextMessage message,
+      {required int messageWidth, bool? showName}) {
     final isAnswer = message.author.id == _user.id;
 
     return Container(
-      margin: EdgeInsets.all(16),
-      child: Column(
-        children: [
-          MarkdownBody(
-            data: message.text,
-            selectable: true,
-            onTapLink: (text, href, title) {
-              launchUrl(Uri.parse(href!));
-            },
-          ),
-          if (isAnswer && !_isProcessed) Column(
-            children: [
-              Divider(color: Colors.black12,),
-              _messageMenu(message)
-            ],
-          )
-        ],
-      )
-    );
+        margin: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            MarkdownBody(
+              data: message.text,
+              selectable: true,
+              onTapLink: (text, href, title) {
+                launchUrl(Uri.parse(href!));
+              },
+            ),
+            if (isAnswer && !_isProcessed)
+              Column(
+                children: [
+                  Divider(
+                    color: Colors.black12,
+                  ),
+                  _messageMenu(message)
+                ],
+              )
+          ],
+        ));
   }
 
   //--------------------------------------------------------------------------//
@@ -378,11 +457,14 @@ class _MyHomeState extends State<MyHome> {
       user: _answerer,
       l10n: ChatL10nEn(
           inputPlaceholder: tr("l_input_question"),
-          emptyChatPlaceholder: provider.serveConnected ? tr("l_no_conversation") : tr("l_no_server")
-      ),
+          emptyChatPlaceholder: provider.serveConnected
+              ? tr("l_no_conversation")
+              : tr("l_no_server")),
       customMessageBuilder: _customMessageBuilder,
-      textMessageBuilder: (message, {required messageWidth, required showName}) =>
-          _textMessageBuilder(message, messageWidth: messageWidth, showName: showName),
+      textMessageBuilder: (message,
+              {required messageWidth, required showName}) =>
+          _textMessageBuilder(message,
+              messageWidth: messageWidth, showName: showName),
     );
   }
 
@@ -390,16 +472,18 @@ class _MyHomeState extends State<MyHome> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).requestFocus(FocusNode());
-      },
-      child: Scaffold(
-        body: Stack(
-          children: [
-            _chatUI(),
-            _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
-          ],
-        ),
-      ));
+        onTap: () {
+          FocusScope.of(context).requestFocus(FocusNode());
+        },
+        child: Scaffold(
+          body: Stack(
+            children: [
+              _chatUI(),
+              _showWait
+                  ? Center(child: CircularProgressIndicator())
+                  : SizedBox()
+            ],
+          ),
+        ));
   }
 }

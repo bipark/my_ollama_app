@@ -1,10 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_styled_toast/flutter_styled_toast.dart';
-
+import '../utils/platform_utils.dart';
 
 import '../widgets/text_fields.dart';
 import '../provider/main_provider.dart';
@@ -89,6 +90,7 @@ class _MySettingsState extends State<MySettings> {
   Widget build(BuildContext context) {
     final provider = context.read<MainProvider>();
     final version = provider.version + ' (' + provider.buildNumber.toString() + ')';
+    final isDesktop = isDesktopOrTablet();  // Use the new function
 
     final widgets = [
       ListTile(title: Text(tr("l_ollama_setting"), style: title_style)),
@@ -138,8 +140,28 @@ class _MySettingsState extends State<MySettings> {
       }),
       ActionCardPanel(Icons.info, tr("l_myollama"), tr("l_version") + version, Icons.arrow_forward_ios, () {
         launchUrl(Uri.parse("http://practical.kr"));
-      })
+      }),
     ];
+
+    final content = Container(
+      padding: const EdgeInsets.all(10.0),
+      child: Material(
+        child: CustomScrollView(
+          slivers: [
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => widgets[index],
+                childCount: widgets.length,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (isDesktop) {
+      return content;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -149,32 +171,20 @@ class _MySettingsState extends State<MySettings> {
           ],
         ),
         actions: [
-          IconButton(onPressed: (){
-            _loadPreferences();
-          }, icon: Icon(Icons.refresh, color: Colors.white)),
-          // IconButton(onPressed: (){
-          //   provider.savePreferences();
-          // }, icon: Icon(Icons.save_alt, color: Colors.white)),
+          IconButton(
+            onPressed: () {
+              _loadPreferences();
+            },
+            icon: Icon(Icons.refresh, color: Colors.white)
+          ),
         ],
       ),
       body: GestureDetector(
-        onTap: (){
+        onTap: () {
           FocusScope.of(context).requestFocus(FocusNode());
         },
-        child: Container(
-          padding: EdgeInsets.all(10),
-          child: CustomScrollView(
-            slivers: [
-              SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  return widgets[index];
-                }, childCount: widgets.length),
-              )
-            ],
-          ),
-        ),
+        child: content,
       ),
     );
   }
-
 }
