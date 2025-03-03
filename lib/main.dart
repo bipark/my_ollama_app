@@ -108,9 +108,7 @@ class _InitializationWrapperState extends State<InitializationWrapper> {
           );
         }
 
-        return isDesktopOrTablet()
-            ? DesktopView()
-            : MyDrawer();
+        return isDesktopOrTablet() ? DesktopView() : MyDrawer();
       },
     );
   }

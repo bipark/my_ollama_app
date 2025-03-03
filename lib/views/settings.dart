@@ -105,6 +105,7 @@ class _MySettingsState extends State<MySettings> {
               if (_isValidUrl(server_address.text)) {
                 final reached = await provider.setBaseUrl(server_address.text);
                 if (reached) {
+                  MyEventBus().fire(ReloadModelEvent());
                   showToast(tr("l_success"), context: context, position: StyledToastPosition.center);
                 } else {
                   showToast(tr("l_error_url"), context: context, position: StyledToastPosition.center);
@@ -119,7 +120,7 @@ class _MySettingsState extends State<MySettings> {
       QTextField(tr("l_instructions"), instruction, (String value){
         provider.setInstruction(value);
       }, maxLines: 5),
-      QTextField(tr("l_temperture"), temperature, (String value){
+      QTextField(tr("l_temp"), temperature, (String value){
         provider.setTemperature(double.parse(value));
       }),
       ActionCardPanel(Icons.download_for_offline_outlined, tr("l_download"), tr("l_download_ollama"), Icons.arrow_forward_ios, () {

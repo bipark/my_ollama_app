@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 
 import '../provider/main_provider.dart';
+import '../models/chat_session.dart';
 import '../helpers/event_bus.dart';
 
 class ChatService {
@@ -17,9 +18,10 @@ class ChatService {
   final types.User user;
   final Function setState;
   String? selectedImage;
-  final _messageController = StreamController<String>.broadcast();
+  ChatSession? _chatSession;
+  StreamSubscription? _sessionSubscription;
 
-  Stream<String> get messageStream => _messageController.stream;
+  Function(String)? onMessageUpdate;
 
   ChatService({
     required this.context,
@@ -29,105 +31,128 @@ class ChatService {
     required this.user,
     required this.setState,
     this.selectedImage,
+    this.onMessageUpdate,
   });
 
   void dispose() {
-    _messageController.close();
+    _cleanupCurrentSession();
   }
 
-  Future<void> startGeneration(String question) async {
-    final provider = context.read<MainProvider>();
+  void _cleanupCurrentSession() {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = null;
 
-    String curAnswer = "...";
-    types.TextMessage ansMwssage = types.TextMessage(
-      author: user,
-      createdAt: DateTime.now().millisecondsSinceEpoch,
-      id: const Uuid().v4(),
-      text: curAnswer,
-    );
-    messages.insert(0, ansMwssage);
-    setState();
+    if (_chatSession != null) {
+      final provider = context.read<MainProvider>();
+      provider.disposeChatSession(_chatSession!.chatId);
+      _chatSession = null;
+    }
+  }
+
+  Future<void> startGeneration({
+    required String question,
+    required String modelName,
+    required Function(String) onMessageUpdate,
+    required Function(String) onError,
+    required Function() onComplete,
+  }) async {
+    _cleanupCurrentSession();
+    final provider = context.read<MainProvider>();
+    _chatSession = provider.createChatSession(modelName);
 
     List<ollama.Message> qmsg = [];
 
-    // add previous questions
     questions.forEach((item) {
       qmsg.add(ollama.Message(
         role: ollama.MessageRole.system,
-        content: item["question"],
-      ));
-      qmsg.add(ollama.Message(
-        role: ollama.MessageRole.user,
-        content: item["answer"],
+        content: item,
       ));
     });
 
-    // add instruction
     qmsg.add(ollama.Message(
       role: ollama.MessageRole.system,
       content: provider.instruction,
     ));
 
-    // add current question
     qmsg.add(ollama.Message(
       role: ollama.MessageRole.user,
       content: question,
-      images: selectedImage != null ? [selectedImage!] : [],
     ));
 
-    // generate chat
     try {
-      final stream = provider.ollient!.generateChatCompletionStream(
+      final stream = _chatSession!.client.generateChatCompletionStream(
         request: ollama.GenerateChatCompletionRequest(
-          model: provider.selectedModel!,
+          model: modelName,
           messages: qmsg,
-          keepAlive: 1,
+          keepAlive: 5,
           options: ollama.RequestOptions(
             temperature: provider.temperature,
           ),
         ),
       );
 
-      // get answer from stream
+      bool receivedResponse = false;
+      Timer? timeoutTimer = Timer(const Duration(seconds: 30), () {
+        if (!receivedResponse) {
+          onError(tr("l_timeout"));
+        }
+      });
+
       String answer = '';
-      int totalTokens = 0;
-      final startTime = DateTime.now();
-      String currentTokensPerSecond = "0.0";
+      int tokens = 0;
+      final stopwatch = Stopwatch()..start();
 
-      await for (final res in stream) {
-        totalTokens += ((res.message.content ?? '').length / 4).ceil();
-        final currentTime = DateTime.now();
-        final elapsedSeconds = currentTime.difference(startTime).inMilliseconds / 1000.0;
-        currentTokensPerSecond = (totalTokens / elapsedSeconds).toStringAsFixed(1);
+      try {
+        await for (final response in stream) {
+          if (!receivedResponse) {
+            receivedResponse = true;
+            if (timeoutTimer != null && timeoutTimer.isActive) {
+              timeoutTimer.cancel();
+              timeoutTimer = null;
+            }
 
-        final newContent = res.message.content ?? '';
-        answer += newContent;
+            onMessageUpdate("Processing...");
+          }
 
-        _messageController.add(answer + '\n\nToken/Sec: $currentTokensPerSecond');
+          final token = response.message.content ?? '';
+
+          if (token.isNotEmpty) {
+            tokens++;
+            answer += token;
+            onMessageUpdate(answer);
+
+            await Future.delayed(Duration(milliseconds: 1));
+          }
+        }
+
+        if (timeoutTimer != null && timeoutTimer.isActive) {
+          timeoutTimer.cancel();
+          timeoutTimer = null;
+        }
+
+        stopwatch.stop();
+        final seconds = stopwatch.elapsedMilliseconds / 1000;
+        final tokensPerSecond = tokens / seconds;
+
+        answer += "\n\n   _MyOllama - $modelName   " +
+            "\nToken/Sec: ${tokensPerSecond.toStringAsFixed(1)}" +
+            "_";
+
+        onMessageUpdate(answer);
+
+        await provider.qdb.insertQuestion(provider.curGroupId,
+            provider.instruction, question, answer, selectedImage, modelName);
+
+        MyEventBus().fire(ChatDoneEvent());
+
+        selectedImage = null;
+
+        onComplete();
+      } catch (e) {
+        onError(e.toString());
       }
-
-      // Calculate final tokens per second
-      final endTime = DateTime.now();
-      final totalElapsedSeconds = endTime.difference(startTime).inMilliseconds / 1000.0;
-      final finalTokensPerSecond = (totalTokens / totalElapsedSeconds).toStringAsFixed(1);
-
-      // Add Model Name and final tokens per second to Answer
-      answer += "\n\n   _MyOllama - ${provider.selectedModel!}   " + "\nToken/Sec: $finalTokensPerSecond" + "_";
-      _messageController.add(answer);
-
-      // End of Chat
-      MyEventBus().fire(ChatDoneEvent());
-
-      // save to DB
-      await provider.qdb.insertQuestion(provider.curGroupId, provider.instruction, question, answer, selectedImage, provider.selectedModel!);
-
-      // Drawer Menu Reload
-      MyEventBus().fire(RefreshMainListEvent());
-
-      selectedImage = null;
     } catch (e) {
-      _messageController.add(tr("l_error_1"));
-      print(e);
+      onError(e.toString());
     }
   }
 }

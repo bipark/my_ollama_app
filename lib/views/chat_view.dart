@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_styled_toast/flutter_styled_toast.dart';
@@ -43,6 +44,7 @@ class _ChatViewState extends State<ChatView> {
   bool _showWait = false;
   bool _isProcessed = false;
   late final ChatService _chatService;
+  String _currentGroupId = '';
 
   //--------------------------------------------------------------------------//
   @override
@@ -67,10 +69,11 @@ class _ChatViewState extends State<ChatView> {
         messages: _messages,
         answerer: _answerer,
         user: _user,
-        setState: () => setState(() {}));
+        setState: () => setState(() {}),
+        onMessageUpdate: _handleMessageUpdate);
 
     final rightMenu = [
-      IconButton(onPressed: _newNote, icon: Icon(Icons.note_add_outlined)),
+      IconButton(onPressed: _newNote, icon: Icon(Icons.add)),
       DropMenu(_reloadServerModel, _newNote, _shareAll, _showSettings)
     ];
     MyEventBus().fire(ChangeTitleEvent(tr("l_myollama"), rightMenu));
@@ -78,6 +81,10 @@ class _ChatViewState extends State<ChatView> {
 
   //--------------------------------------------------------------------------//
   void _showSettings() {
+    // 설정 열기 전 현재 서버 주소 저장
+    final provider = context.read<MainProvider>();
+    final oldServerUrl = provider.baseUrl;
+
     if (isDesktopOrTablet()) {
       showDialog(
         context: context,
@@ -99,7 +106,16 @@ class _ChatViewState extends State<ChatView> {
                       Spacer(),
                       IconButton(
                         icon: Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+
+                          // 설정 창이 닫힐 때 서버 주소 변경 확인
+                          final newServerUrl = provider.baseUrl;
+                          if (oldServerUrl != newServerUrl) {
+                            // 서버 주소가 변경되었으면 모델 리로드
+                            MyEventBus().fire(ReloadModelEvent());
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -117,7 +133,13 @@ class _ChatViewState extends State<ChatView> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const MySettings()),
-      );
+      ).then((_) {
+        final newServerUrl = provider.baseUrl;
+        if (oldServerUrl != newServerUrl) {
+          // 서버 주소가 변경되었으면 모델 리로드
+          MyEventBus().fire(ReloadModelEvent());
+        }
+      });
     }
   }
 
@@ -139,6 +161,9 @@ class _ChatViewState extends State<ChatView> {
   //--------------------------------------------------------------------------//
   void _reloadServerModel() async {
     final result = await context.read<MainProvider>().checkServerConnection();
+    MyEventBus().fire(ReloadModelEvent());
+    setState(() {});
+
     if (result) {
       showToast(tr("l_success"),
           context: context, position: StyledToastPosition.center);
@@ -146,8 +171,6 @@ class _ChatViewState extends State<ChatView> {
       showToast(tr("l_error_url"),
           context: context, position: StyledToastPosition.center);
     }
-    MyEventBus().fire(ReloadModelEvent());
-    setState(() {});
   }
 
   //--------------------------------------------------------------------------//
@@ -165,11 +188,10 @@ class _ChatViewState extends State<ChatView> {
         _makeImageMessageAdd(item["image"]);
       }
       int qtime = DateTime.parse(item["created"]).millisecondsSinceEpoch;
-      _makeMessageAdd(
-          _answerer, item["question"], Uuid().v4(), qtime, item["id"]);
+      _makeMessageAdd(_user, item["question"], Uuid().v4(), qtime, item["id"]);
 
       String answer = item["answer"];
-      _makeMessageAdd(_user, answer, Uuid().v4(), qtime, item["id"]);
+      _makeMessageAdd(_answerer, answer, Uuid().v4(), qtime, item["id"]);
     });
 
     _showWait = false;
@@ -219,35 +241,153 @@ class _ChatViewState extends State<ChatView> {
 
     if (question != null) {
       _questionController.text = question;
+    } else {
+      _questionController.clear();
     }
+
     setState(() {});
   }
 
   //--------------------------------------------------------------------------//
-  Future<void> _startGeneration(String question) async {
-    _isProcessed = true;
-    String curAnswer = "...";
-    types.TextMessage ansMwssage = types.TextMessage(
+  void _handleMessageUpdate(String content) {
+    // 디버그 로그
+    if (_messages.isEmpty) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    // 첫 번째 메시지가 응답자(AI)의 메시지인지 확인
+    if (_messages[0].author.id != _answerer.id) {
+      return;
+    }
+
+    // 현재 메시지 텍스트 확인
+    final currentText = (_messages[0] as types.TextMessage).text;
+    if (currentText == content) {
+      return;
+    }
+
+    setState(() {
+      _messages[0] =
+          (_messages[0] as types.TextMessage).copyWith(text: content);
+    });
+  }
+
+  //--------------------------------------------------------------------------//
+  void _beginAsking(types.PartialText message) async {
+    // 질문이 입력되면 키보드 감추기
+    FocusScope.of(context).unfocus();
+
+    final provider = context.read<MainProvider>();
+    String question = message.text;
+
+    if (question.isEmpty) return;
+
+    // 이미 처리 중인 경우 중복 요청 방지
+    if (_isProcessed) {
+      return;
+    }
+
+    // 사용자 메시지 추가
+    types.TextMessage ask = types.TextMessage(
       author: _user,
       createdAt: DateTime.now().millisecondsSinceEpoch,
       id: const Uuid().v4(),
-      text: curAnswer,
+      text: question,
     );
-    _messages.insert(0, ansMwssage);
-    setState(() {});
 
-    // 스트림 구독 설정
-    _chatService.selectedImage = _selectedImage;
-    _chatService.messageStream.listen((content) {
-      if (_messages.isNotEmpty) {
-        _messages[0] =
-            (_messages[0] as types.TextMessage).copyWith(text: content);
-        setState(() {});
-      }
+    setState(() {
+      _messages.insert(0, ask);
+      _isProcessed = true; // 처리 중 상태 설정
     });
 
-    // 생성 시작
-    await _chatService.startGeneration(question);
+    // 선택된 모델 확인
+    String? modelToUse = provider.selectedModel;
+
+    // 선택된 모델이 없으면 첫 번째 모델 사용
+    if (modelToUse == null && provider.modelList!.isNotEmpty) {
+      modelToUse = provider.modelList!.first.model;
+      if (modelToUse != null) {
+        provider.setSelectedModel(modelToUse);
+      } else {
+        setState(() {
+          _isProcessed = false;
+        });
+        showToast(tr("l_error_no_models"),
+            context: context, position: StyledToastPosition.center);
+        return;
+      }
+    }
+
+    if (mounted) {
+      _chatService.selectedImage = _selectedImage;
+
+      try {
+        // 응답 메시지 미리 생성
+        types.TextMessage ansMessage = types.TextMessage(
+          author: _answerer,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          id: const Uuid().v4(),
+          text: "...",
+        );
+
+        setState(() {
+          _messages.insert(0, ansMessage);
+        });
+
+        // 채팅 서비스를 통해 응답 생성 시작
+        await _chatService.startGeneration(
+          question: question,
+          modelName: modelToUse!,
+          onMessageUpdate: (content) {
+            // 디버그 로그 추가
+            _handleMessageUpdate(content);
+          },
+          onError: (error) {
+            // 오류 메시지로 UI 업데이트
+            if (_messages.isNotEmpty &&
+                _messages[0].author.id == _answerer.id) {
+              setState(() {
+                _messages[0] = (_messages[0] as types.TextMessage).copyWith(
+                  text: "오류: $error",
+                );
+              });
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error)),
+            );
+            setState(() {
+              _isProcessed = false;
+            });
+          },
+          onComplete: () {
+            setState(() {
+              _isProcessed = false;
+            });
+          },
+        );
+      } catch (e) {
+        // 오류 메시지로 UI 업데이트
+        if (_messages.isNotEmpty && _messages[0].author.id == _answerer.id) {
+          setState(() {
+            _messages[0] = (_messages[0] as types.TextMessage).copyWith(
+              text: "오류: $e",
+            );
+          });
+        }
+
+        setState(() {
+          _isProcessed = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("오류: $e")),
+        );
+      }
+    }
   }
 
   //--------------------------------------------------------------------------//
@@ -276,23 +416,6 @@ class _ChatViewState extends State<ChatView> {
     setState(() {
       _messages[index] = updatedMessage;
     });
-  }
-
-  //--------------------------------------------------------------------------//
-  void _beginAsking(types.PartialText message) async {
-    FocusScope.of(context).requestFocus(FocusNode());
-
-    types.TextMessage ask = types.TextMessage(
-      author: _answerer,
-      createdAt: DateTime.now().millisecondsSinceEpoch,
-      id: const Uuid().v4(),
-      text: message.text,
-    );
-
-    setState(() {
-      _messages.insert(0, ask);
-    });
-    await _startGeneration(message.text);
   }
 
   //--------------------------------------------------------------------------//
@@ -335,7 +458,7 @@ class _ChatViewState extends State<ChatView> {
       final sharedData = "$question\n\n$answer\n\n$model\n$created";
 
       if (number == 0) {
-        _newNote(question);
+        _newNote();
       } else if (number == 1) {
         Clipboard.setData(ClipboardData(text: sharedData));
         showToast(tr("l_copyed"),
@@ -407,7 +530,7 @@ class _ChatViewState extends State<ChatView> {
   //--------------------------------------------------------------------------//
   Widget _textMessageBuilder(types.TextMessage message,
       {required int messageWidth, bool? showName}) {
-    final isAnswer = message.author.id == _user.id;
+    final isAnswer = message.author.id == _answerer.id;
 
     return Container(
         margin: EdgeInsets.all(16),
@@ -454,7 +577,7 @@ class _ChatViewState extends State<ChatView> {
       onAttachmentPressed: _handleAttachmentPressed,
       onPreviewDataFetched: _handlePreviewDataFetched,
       onSendPressed: _beginAsking,
-      user: _answerer,
+      user: _user,
       l10n: ChatL10nEn(
           inputPlaceholder: tr("l_input_question"),
           emptyChatPlaceholder: provider.serveConnected
@@ -471,19 +594,19 @@ class _ChatViewState extends State<ChatView> {
   //--------------------------------------------------------------------------//
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-        onTap: () {
-          FocusScope.of(context).requestFocus(FocusNode());
-        },
-        child: Scaffold(
-          body: Stack(
-            children: [
-              _chatUI(),
-              _showWait
-                  ? Center(child: CircularProgressIndicator())
-                  : SizedBox()
-            ],
+    return Scaffold(
+      body: Stack(
+        children: [
+          GestureDetector(
+            onTap: () {
+              // 화면의 빈 공간을 터치하면 키보드 숨기기
+              FocusScope.of(context).unfocus();
+            },
+            child: _chatUI(),
           ),
-        ));
+          _showWait ? Center(child: CircularProgressIndicator()) : SizedBox()
+        ],
+      ),
+    );
   }
 }

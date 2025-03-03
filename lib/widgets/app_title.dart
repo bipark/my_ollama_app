@@ -8,7 +8,7 @@ class AppTitle extends StatelessWidget {
   const AppTitle({
     super.key,
     this.fontSize = 17,
-    this.textColor = Colors.indigo,
+    this.textColor = Colors.white,
   });
 
   @override
@@ -16,8 +16,6 @@ class AppTitle extends StatelessWidget {
     return Row(
       children: [
         SizedBox(width: 10),
-        Image.asset("assets/images/appstore.png", width: 30, height: 30),
-        SizedBox(width: 6),
         Text(tr("l_myollama"),
             style: TextStyle(
               fontSize: fontSize,

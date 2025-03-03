@@ -32,3 +32,8 @@
 - Support iPad
 - Support Mac Desktop
 - fix some bugs
+
+### 2025/03/03 - 1.2.0
+
+- Add Chat Session
+- fix some bugs

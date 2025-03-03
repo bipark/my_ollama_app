@@ -46,7 +46,7 @@ class QDatabase {
 
     final dbPath = await getDatabasesPath();
     final path = dbPath + "/" + filePath;
-    // print("DB Path: $path");
+    print("DB Path: $path");
 
     final options = OpenDatabaseOptions(
         version: 1,

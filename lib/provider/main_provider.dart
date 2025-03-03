@@ -9,10 +9,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/model_manager.dart';
+import '../models/chat_session.dart';
 import '../helpers/event_bus.dart';
 
 final FEED_IMAGE_SIZE = 200.0;
-
 
 class MainProvider with ChangeNotifier {
   final _prefs = SharedPreferencesAsync();
@@ -25,7 +25,7 @@ class MainProvider with ChangeNotifier {
   int buildNumber = 0;
 
   String baseUrl = "http://192.168.0.1:11434";
-  OllamaClient? ollient;
+  Map<String, ChatSession> activeSessions = {};
   List<Model>? modelList;
   String? selectedModel;
 
@@ -36,13 +36,8 @@ class MainProvider with ChangeNotifier {
   //--------------------------------------------------------------------------//
   Future<void> initialize() async {
     await loadPreferences();
-
-    // Init Ollama
-    ollient = OllamaClient(baseUrl: baseUrl + "/api");
     await checkServerConnection();
     await _initPackageInfo();
-
-    // Init DB
     await qdb.init();
 
     isInitialized = true;
@@ -54,35 +49,7 @@ class MainProvider with ChangeNotifier {
     temperature = await _prefs.getDouble("temperature") ?? 0.5;
     baseUrl = await _prefs.getString("baseUrl") ?? baseUrl;
     instruction = await _prefs.getString("instruction") ?? instruction;
-
     notifyListeners();
-  }
-
-  //--------------------------------------------------------------------------//
-  Future<bool> _loadModels() async {
-    final model = await _prefs.getString("selectedModel");
-    try {
-      final res = await ollient!.listModels();
-      if (res.models != null) {
-        modelList = res.models!;
-
-        if (modelList!.length > 0) {
-          bool modelExists = modelList!.any((m) => m.model == model);
-          selectedModel = modelExists ? model : modelList!.first.model;
-          serveConnected = true;
-        }
-      }
-      notifyListeners();
-
-      return true;
-    } catch (e) {
-      print(e);
-      selectedModel = "No Ollama Models";
-      modelList = [];
-      notifyListeners();
-
-      return false;
-    }
   }
 
   //--------------------------------------------------------------------------//
@@ -91,7 +58,25 @@ class MainProvider with ChangeNotifier {
       serveConnected = true;
       return await _loadModels();
     } else {
-      selectedModel = "No Ollama Models";
+      return false;
+    }
+  }
+
+  //--------------------------------------------------------------------------//
+  Future<bool> _loadModels() async {
+    try {
+      final client = OllamaClient(baseUrl: baseUrl + "/api");
+      final res = await client.listModels();
+      if (res.models != null) {
+        modelList = res.models!;
+        serveConnected = modelList!.isNotEmpty;
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print(e);
+      modelList = [];
+      notifyListeners();
       return false;
     }
   }
@@ -99,7 +84,8 @@ class MainProvider with ChangeNotifier {
   //--------------------------------------------------------------------------//
   Future<bool> _isOllamaOpen() async {
     try {
-      final response = await http.get(Uri.parse(baseUrl)).timeout(Duration(seconds: 1));
+      final response =
+          await http.get(Uri.parse(baseUrl)).timeout(Duration(seconds: 1));
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -107,10 +93,82 @@ class MainProvider with ChangeNotifier {
   }
 
   //--------------------------------------------------------------------------//
+  ChatSession createChatSession(String modelName) {
+    Future.microtask(() {
+      _cleanupInactiveSessions();
+    });
+
+    final chatId = Uuid().v4();
+    final client = OllamaClient(baseUrl: baseUrl + "/api");
+
+    final session = ChatSession(
+      chatId: chatId,
+      modelName: modelName,
+      client: client,
+    );
+
+    activeSessions[chatId] = session;
+
+    Future.microtask(() {
+      notifyListeners();
+    });
+
+    return session;
+  }
+
+  //--------------------------------------------------------------------------//
+  void _cleanupInactiveSessions() {
+    final inactiveSessions = activeSessions.entries
+        .where((entry) => !entry.value.isActive)
+        .map((entry) => entry.key)
+        .toList();
+
+    for (final sessionId in inactiveSessions) {
+      disposeChatSession(sessionId);
+    }
+  }
+
+  //--------------------------------------------------------------------------//
+  void disposeChatSession(String chatId) {
+    final session = activeSessions[chatId];
+    if (session != null) {
+      try {
+        session.dispose();
+      } catch (e) {
+        print("Error disposing session: $e");
+      }
+      activeSessions.remove(chatId);
+
+      Future.microtask(() {
+        notifyListeners();
+      });
+    }
+  }
+
+  //--------------------------------------------------------------------------//
+  void disposeAllSessions() {
+    for (final session in activeSessions.values) {
+      try {
+        session.dispose();
+      } catch (e) {
+        print("Error disposing session: $e");
+      }
+    }
+    activeSessions.clear();
+
+    Future.microtask(() {
+      notifyListeners();
+    });
+  }
+
+  //--------------------------------------------------------------------------//
   void setSelectedModel(String model) {
     selectedModel = model;
     _prefs.setString("selectedModel", model);
-    notifyListeners();
+
+    Future.microtask(() {
+      notifyListeners();
+    });
   }
 
   //--------------------------------------------------------------------------//
@@ -129,31 +187,13 @@ class MainProvider with ChangeNotifier {
 
   //--------------------------------------------------------------------------//
   Future<bool> setBaseUrl(String url) async {
-    final model = await _prefs.getString("selectedModel");
-
     baseUrl = url;
     _prefs.setString("baseUrl", url);
 
-    ollient = null;
-    ollient = OllamaClient(baseUrl: baseUrl + "/api");
-    try {
-      final res = await ollient!.listModels();
-      if (res.models != null) {
-        modelList = res.models!;
+    // Dispose all active sessions
+    disposeAllSessions();
 
-        if (modelList!.length > 0) {
-          bool modelExists = modelList!.any((m) => m.model == model);
-          selectedModel = modelExists ? model : modelList!.first.model;
-          serveConnected = true;
-        }
-        MyEventBus().fire(ReloadModelEvent());
-      }
-      notifyListeners();
-      return true;
-    } catch (e) {
-      print(e);
-      return false;
-    }
+    return await checkServerConnection();
   }
 
   //--------------------------------------------------------------------------//
@@ -162,5 +202,4 @@ class MainProvider with ChangeNotifier {
     _prefs.setString("instruction", instruction);
     notifyListeners();
   }
-
 }

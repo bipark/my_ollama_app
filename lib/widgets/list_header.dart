@@ -11,7 +11,7 @@ class ListHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.indigo,
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       height: 56,
@@ -23,7 +23,7 @@ class ListHeader extends StatelessWidget {
             onPressed: () {
               MyEventBus().fire(RefreshMainListEvent());
             },
-            icon: Icon(Icons.refresh, color: Colors.black)
+            icon: Icon(Icons.refresh, color: Colors.white)
           ),
         ],
       ),

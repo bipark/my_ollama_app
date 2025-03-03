@@ -41,7 +41,7 @@ class _DropMenuState extends State<DropMenu> {
         MenuItemButton(
           child: Row(
             children: <Widget>[
-              const Icon(Icons.note_add_outlined),
+              const Icon(Icons.add),
               const SizedBox(width: 8),
               Text(tr("l_new_chat")),
             ],

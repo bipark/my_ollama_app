@@ -97,7 +97,7 @@ class _MyDrawerState extends State<MyDrawer> {
   @override
   Widget build(BuildContext context) {
     return AdvancedDrawer(
-      backdropColor: Colors.white,
+      backdropColor: Colors.indigo,
       controller: _drawer,
       animateChildDecoration: true,
       rtlOpening: false,

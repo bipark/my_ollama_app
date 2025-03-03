@@ -131,8 +131,9 @@ class _TitleListState extends State<TitleList> {
   //--------------------------------------------------------------------------//
   Widget _searchPanel() {
     return Container(
+      margin: EdgeInsets.all(10),
       decoration: BoxDecoration(
-        border: Border.all(width: 1, color: Colors.grey.shade300),
+        border: Border.all(width: 1, color: Colors.indigo),
       ),
       child: Row(
         children: [
