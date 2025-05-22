@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'views/drawer.dart';
 import 'views/desktop_view.dart';
@@ -12,6 +13,11 @@ import 'utils/platform_utils.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+
+  if (Platform.isWindows) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   runApp(MultiProvider(
     providers: [
