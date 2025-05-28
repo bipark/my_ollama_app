@@ -30,6 +30,8 @@ dependencies:
   flutter_styled_toast: ^2.2.1
   share_plus: ^10.1.2
   flutter_markdown: ^0.7.4+3
+  split_view: ^3.2.1
+  sqflite_common_ffi: ^2.3.0
 
 dev_dependencies:
   flutter_test:
